@@ -24,14 +24,14 @@ time_in_day = pd.date_range("00:00", "23:45", freq="15min").time
 
 # ----------- Create the 3 layouts this Window will display -----------
 layout1 = [[sg.Text('Welcome to the data entry sheet for flex options', background_color = 'darkblue')],
-            [sg.Text('Company name', size =size), sg.Input(key='company_name')],
-            [sg.Text('Customer id', size =size), sg.Input(key='customer_id')],
-            [sg.Text('Branche', size =size), sg.Input(key='Branche')],
-            [sg.Text('Piek aansluiting', size =size), sg.Input(key='PiekAansluiting')],
-            [sg.Text('Access link smartmeter', size =size), sg.Input(key='ICT_METER')],
-            [sg.Text('Selecteer categorie', size=size), sg.ButtonMenu('Categorieën', menu_def=type_flex, key='type_flex')],
+            [sg.Text('Company name', size =size), sg.Input(key='company_name_main')],
+            [sg.Text('Customer id', size =size), sg.Input(key='customer_id_main')],
+            [sg.Text('Branche', size =size), sg.Input(key='Branche_main')],
+            [sg.Text('Piek aansluiting', size =size), sg.Input(key='PiekAansluiting_main')],
+            [sg.Text('Access link smartmeter', size =size), sg.Input(key='ICT_METER_main')],
+            [sg.Text('Selecteer categorie', size=size), sg.ButtonMenu('Categorieën', menu_def=type_flex, key='type_flex_main')],
             #[sg.Text('Type of appliance (indien niet in lijst vul zelf in)', size=size), sg.Combo(values=appliances, key='Appliance')],
-            [sg.Text('Type appliance', size=size), sg.ButtonMenu('Type', menu_def=appliances, key='type_appl')],
+            [sg.Text('Type appliance', size=size), sg.ButtonMenu('Type', menu_def=appliances, key='type_appl_main')],
             #[sg.Text('Branche', size=size), sg.OptionMenu(values=menu_def_2, key='Branche')],
             # [sg.Text('Needed information', background_color = 'darkblue')],
             # #[sg.Text('Type of appliance', size=size), sg.OptionMenu(values=appliances, key='Appliance')],
@@ -71,7 +71,7 @@ layout2 = [ [sg.Text('Informatie batterijen', background_color = 'darkblue')],
 
 layout3 = [ [sg.Text('Informatie EV laadpalen', background_color = 'darkblue')],
             [sg.Text('Type/model', size=size), sg.Input(key='model_ev')],
-            [sg.Text('Aantal palen', size=size), sg.Input(key='aantal_palen')],
+            [sg.Text('Aantal palen', size=size), sg.Input(key='aantal_palen_ev')],
             [sg.Text('Max capaciteit per paal in kW', size=size), sg.Input(key='charge_KW_ev')],
             [sg.Text('Maximale capaciteit park in kW', size=size), sg.Input(key='size_kWh_ev')],
             [sg.Text('Tijdens welke tijdstippen is flex mogelijk', background_color='darkblue')],
@@ -121,7 +121,7 @@ layout6 = [ [sg.Text('Informatie Warmtepomp', background_color = 'darkblue')],
             [sg.Text('Access link backend appliance', size=size), sg.Input(key='ICT_APPL_wp')],
             [sg.Text('Buffer', background_color='darkblue')],
             [sg.Text('Ik heb een warmtebuffer bij mijn warmtepomp')],
-            [sg.Radio('Ja', 1, enable_events=True, key='buffer_ja'), sg.Radio('Nee', 1, enable_events=True, key='buffer_nee')],
+            [sg.Radio('Ja', 1, enable_events=True, key='buffer_ja_buf'), sg.Radio('Nee', 1, enable_events=True, key='buffer_nee_buf')],
             [sg.Text('Indien ja vul de volgende vragen in:')],
             [sg.Text('Type/model', size =size), sg.Input(key='model_buf')],
             [sg.Text('Charge capaciteit in kW', size =size), sg.Input(key='charge_KW_buf')],
@@ -129,7 +129,7 @@ layout6 = [ [sg.Text('Informatie Warmtepomp', background_color = 'darkblue')],
             [sg.Text('IP address system', size=size), sg.Input(key='IP_buf')],
             [sg.Text('Access link backend appliance', size=size), sg.Input(key='ICT_APPL_buf')],
             [sg.Text('Extra', background_color='darkblue')],
-            [sg.Text('Opmerkingen', size=size), sg.Input(key='Remarks_wp')],
+            [sg.Text('Opmerkingen', size=size), sg.Input(key='Remarks_wp_buf')],
             ]
 layout7 = [ [sg.Text('Informatie warm water boiler', background_color = 'darkblue')],
             [sg.Text('Type/model', size=size), sg.Input(key='model_wwb')],
@@ -228,32 +228,32 @@ while True:
         # elif filled_in == False:
         #     sg.popup_ok("You need to fill in all the fields")
         # filled_in = True
-    if event == 'type_appl':
-        if values['type_appl'] == 'Batterij':
+    if event == 'type_appl_main':
+        if values['type_appl_main'] == 'Batterij':
             window[f'-COL{layout}-'].update(visible=False)
             layout = 2
             window[f'-COL{layout}-'].update(visible=True)
-        elif values['type_appl'] == 'EV laadpaal':
+        elif values['type_appl_main'] == 'EV laadpaal':
             window[f'-COL{layout}-'].update(visible=False)
             layout = 3
             window[f'-COL{layout}-'].update(visible=True)
-        elif values['type_appl'] == 'Warmtepomp':
+        elif values['type_appl_main'] == 'Warmtepomp':
             window[f'-COL{layout}-'].update(visible=False)
             layout = 6
             window[f'-COL{layout}-'].update(visible=True)
-        elif values['type_appl'] == 'Koelcel':
+        elif values['type_appl_main'] == 'Koelcel':
             window[f'-COL{layout}-'].update(visible=False)
             layout = 5
             window[f'-COL{layout}-'].update(visible=True)
-        elif values['type_appl'] == 'AC':
+        elif values['type_appl_main'] == 'AC':
             window[f'-COL{layout}-'].update(visible=False)
             layout = 4
             window[f'-COL{layout}-'].update(visible=True)
-        elif values['type_appl'] == 'Warm water boiler':
+        elif values['type_appl_main'] == 'Warm water boiler':
             window[f'-COL{layout}-'].update(visible=False)
             layout = 7
             window[f'-COL{layout}-'].update(visible=True)
-        elif values['type_appl'] == 'Overig':
+        elif values['type_appl_main'] == 'Overig':
             window[f'-COL{layout}-'].update(visible=False)
             layout = 8
             window[f'-COL{layout}-'].update(visible=True)
