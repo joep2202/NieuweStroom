@@ -1,9 +1,11 @@
 
+from datetime import datetime, timedelta
+import pandas as pd
 
 
 class keys:
     def __init__(self):
-       self.a = 65
+        self.time_lists_valid = {}
        # self.main_keys = ['company_name','customer_id','Branche','PiekAansluiting','ICT_METER','type_flex','type_appl']
        # self.bat_keys = ['model_bat','charge_KW_bat','size_kWh_bat','start_time_bat','end_time_bat','start_time2_bat','end_time2_bat','IP_bat','ICT_APPL_bat','functie_batterij_bat','Remarks_bat']
        # self.EV_keys = ['model_ev','aantal_palen','charge_KW_ev','size_kWh_ev','start_time_ev','end_time_ev','IP_ev','ICT_APPL_ev','Remarks_ev']
@@ -30,3 +32,28 @@ class keys:
         # print(self.column_names)
         # print(self.check)
         return self.main_keys, self.bat_keys, self.EV_keys,self.AC_keys, self.KC_keys, self.WP_keys_buf, self.WP_keys_no_buf, self.WWB_keys, self.overig_keys
+
+    def generate_time_intervals(self, start_time, end_time, interval_minutes=15):
+        start_time = datetime.strptime(start_time, '%H:%M')
+        end_time = datetime.strptime(end_time, '%H:%M')
+
+        # Initialize a list of 1s and 0s for each 15-minute interval
+        time_intervals = []
+
+        # Generate 15-minute intervals and assign 1 to intervals within the specified time frame
+        current_time = datetime.strptime('00:00', '%H:%M')
+        while current_time < datetime.strptime('23:59', '%H:%M'):
+            time_intervals.append(int(start_time <= current_time < end_time))
+            current_time += timedelta(minutes=interval_minutes)
+        return time_intervals
+
+    def get_time_list(self,unique_types, batterij):
+        #print(batterij['Met opwek'].to_string())
+        #print(batterij['Zonder opwek'].to_string())
+        for option in unique_types:
+            #print(option)
+            for index, row in batterij[option].iterrows():
+                self.time_lists_valid[str(index)] = self.generate_time_intervals(row['start_time_bat'], row['end_time_bat'])
+                if not pd.isna(row['start_time2_bat']):
+                    self.time_lists_valid[str(index) + 'A'] = self.generate_time_intervals(row['start_time2_bat'],row['end_time2_bat'])
+        return self.time_lists_valid

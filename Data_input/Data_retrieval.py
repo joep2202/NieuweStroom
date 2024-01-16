@@ -30,7 +30,6 @@ class data_retrieval:
         # print(batterij.to_string())
         return self.batterij_unique
 
-
     def EVlaadpaal(self):
         EV = self.data[self.data['type_appl_main'] == 'EV laadpaal']
         EV = EV.loc[:, self.main_keys + self.EV_keys]
