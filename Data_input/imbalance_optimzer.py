@@ -19,8 +19,8 @@ class optimizer:
     def ObjectiveFunction(self, model):
         return sum([model.varA[t] for t in model.Time])
 
-    def run(self, batterij):
-        self.model_imbalance.run_model()
+    def run(self, batterij, time_list_valid):
+        self.model_imbalance.run_model(batterij=batterij, time_list_valid=time_list_valid)
         # initiate Gurobi and load results
         self.model.total_imbalance = pyomo.Objective(rule=self.ObjectiveFunction, sense=pyomo.maximize)
         #self.model.pprint()
@@ -45,26 +45,29 @@ class optimizer:
             print('3', result)
             print('Solver Status:', result.solver.status)
 
-        #varA = pd.Series(model.varA.extract_values(), name=model.varA.name)
+        varA = pd.Series(self.model.varA.extract_values(), name=self.model.varA.name)
+        varB = pd.Series(self.model.varB.extract_values(), name=self.model.varB.name)
+        varC = pd.Series(self.model.varC.extract_values(), name=self.model.varC.name)
         print('varA', self.model.varA.extract_values())
         print('varB', self.model.varB.extract_values())
         print('varC', self.model.varC.extract_values())
 
         # X TICK LABELS
-        # x = np.arange(0, 96, 8)
-        # x = np.append(x, 96)
-        # x_ticks_labels = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
-        #                   '20:00', '22:00', '00:00']
+        x = np.arange(0, 96, 8)
+        x = np.append(x, 96)
+        x_ticks_labels = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00','20:00', '22:00', '00:00']
         # #x_ticks_labels = x_ticks_labels[int(current_interval / 8):]
-        # fig, ax = plt.subplots(1, figsize=(15, 7))
+        fig, ax = plt.subplots(1, figsize=(15, 7))
 
-        # ax.plot(heat[current_interval:], label='heating SP', color='m')
-        # ax.plot(heat_setting[current_interval:]+Buffer_Discharge[current_interval:], label='to builing', color='g')
+        ax.plot(varA, label='varA', color='m')
+        ax.plot(varB, label='varB', color='g')
         # ax.plot(-cold_setting[current_interval:], label='cooling SP', color='c')
         # ax.plot(heat_setting[current_interval:], label='building heating', color='k')
         # ax.plot(Buffer_charge[current_interval:], label='buffer heating', color='y')
-        # ax.set(xlabel='time (s)', ylabel='Setpoint [W]', title='Heat pump operations over time')
-        # ax.set_xticks(x)
-        # ax.set_xticklabels(x_ticks_labels)
-        # ax.grid()
-        # ax.legend()
+        ax.set(xlabel='time (h)', ylabel='value', title='figure 1')
+        ax.set_xticks(x)
+        ax.set_xticklabels(x_ticks_labels)
+        ax.grid()
+        ax.legend()
+
+        #plt.show()

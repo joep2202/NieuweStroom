@@ -218,24 +218,6 @@ while True:
     if event == 'Submit':
         retrive_data(event, values)
         break
-        # if filled_check == True:
-        #     sg.popup_ok("Check if you filled in all the fields correctly")
-        #     filled_check = False
-        # elif filled_check == False:
-        #     retrive_data(event, values)
-        #     break
-        # for i, x in enumerate(values):
-        #     # print(i, x)
-        #     # print(values[x])
-        #     if values[x] == '':
-        #         filled_in = False
-        # if filled_in == True:
-        #     # print(event, values)
-        #     retrive_data(event, values)
-        #     break
-        # elif filled_in == False:
-        #     sg.popup_ok("You need to fill in all the fields")
-        # filled_in = True
     if event == 'type_appl_main':
         if values['type_appl_main'] == 'Batterij':
             window[f'-COL{layout}-'].update(visible=False)

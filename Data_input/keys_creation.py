@@ -5,8 +5,8 @@ import pandas as pd
 
 class keys:
     def __init__(self):
-        self.time_lists_valid = {}
-       # self.main_keys = ['company_name','customer_id','Branche','PiekAansluiting','ICT_METER','type_flex','type_appl']
+        #self.time_lists_valid = {}
+        self.main_keys_stop = ['company_name','customer_id','Branche','PiekAansluiting','ICT_METER','type_flex','type_appl']
        # self.bat_keys = ['model_bat','charge_KW_bat','size_kWh_bat','start_time_bat','end_time_bat','start_time2_bat','end_time2_bat','IP_bat','ICT_APPL_bat','functie_batterij_bat','Remarks_bat']
        # self.EV_keys = ['model_ev','aantal_palen','charge_KW_ev','size_kWh_ev','start_time_ev','end_time_ev','IP_ev','ICT_APPL_ev','Remarks_ev']
        # self.AC_keys = ['model_ac','aantal_ac','cap_1_ac','cap_alle_ac','start_time_ac','end_time_ac','IP_ac','ICT_APPL_ac','Remarks_ac']
@@ -33,27 +33,45 @@ class keys:
         # print(self.check)
         return self.main_keys, self.bat_keys, self.EV_keys,self.AC_keys, self.KC_keys, self.WP_keys_buf, self.WP_keys_no_buf, self.WWB_keys, self.overig_keys
 
-    def generate_time_intervals(self, start_time, end_time, interval_minutes=15):
+
+    def generate_time_intervals(self, start_time, end_time, start_time2, end_time2, interval_minutes=15):
+        #print(start_time, end_time)
+        double = False
         start_time = datetime.strptime(start_time, '%H:%M')
         end_time = datetime.strptime(end_time, '%H:%M')
+        if start_time2 != 0:
+            double = True
+            start_time2 = datetime.strptime(start_time2, '%H:%M')
+            end_time2 = datetime.strptime(end_time2, '%H:%M')
 
         # Initialize a list of 1s and 0s for each 15-minute interval
         time_intervals = []
 
         # Generate 15-minute intervals and assign 1 to intervals within the specified time frame
         current_time = datetime.strptime('00:00', '%H:%M')
-        while current_time < datetime.strptime('23:59', '%H:%M'):
-            time_intervals.append(int(start_time <= current_time < end_time))
-            current_time += timedelta(minutes=interval_minutes)
+        if double == True:
+            while current_time < datetime.strptime('23:59', '%H:%M'):
+                time_intervals.append(int((start_time <= current_time < end_time) or (start_time2 <= current_time < end_time2)))
+                current_time += timedelta(minutes=interval_minutes)
+        if double == False:
+            while current_time < datetime.strptime('23:59', '%H:%M'):
+                time_intervals.append(int(start_time <= current_time < end_time))
+                current_time += timedelta(minutes=interval_minutes)
         return time_intervals
 
-    def get_time_list(self,unique_types, batterij):
-        #print(batterij['Met opwek'].to_string())
-        #print(batterij['Zonder opwek'].to_string())
+    def get_time_list(self,unique_types, appliance):
+        self.time_lists_valid = {}
+        filtered_columns = []
         for option in unique_types:
             #print(option)
-            for index, row in batterij[option].iterrows():
-                self.time_lists_valid[str(index)] = self.generate_time_intervals(row['start_time_bat'], row['end_time_bat'])
-                if not pd.isna(row['start_time2_bat']):
-                    self.time_lists_valid[str(index) + 'A'] = self.generate_time_intervals(row['start_time2_bat'],row['end_time2_bat'])
+            filtered_columns = [col for col in appliance[option].columns.to_list() if 'start_time' in col or 'end_time' in col]
+            if len(filtered_columns) > 0 and len(filtered_columns) <= 2:
+                for index, row in appliance[option].iterrows():
+                    if not pd.isna(row[filtered_columns[0]]) and not pd.isna(row[filtered_columns[1]]):
+                        self.time_lists_valid[row['appl_id_main']] = self.generate_time_intervals(row[filtered_columns[0]], row[filtered_columns[1]], 0, 0)
+            if len(filtered_columns) > 2:
+                #print(filtered_columns)
+                for index, row in appliance[option].iterrows():
+                    if not pd.isna(row[filtered_columns[0]]) and not pd.isna(row[filtered_columns[1]]) and not pd.isna(row[filtered_columns[2]]) and not pd.isna(row[filtered_columns[3]]):
+                        self.time_lists_valid[row['appl_id_main']] = self.generate_time_intervals(row[filtered_columns[0]], row[filtered_columns[1]], row[filtered_columns[2]], row[filtered_columns[3]])
         return self.time_lists_valid

@@ -41,7 +41,7 @@ class data_retrieval:
 
     def AC(self):
         AC = self.data[self.data['type_appl_main'] == 'AC']
-        AC = AC.loc[:, self.main_keys + self.bat_keys]
+        AC = AC.loc[:, self.main_keys + self.AC_keys]
         for type in self.unique_type_flex:
             self.AC_unique[type] = AC[AC['type_flex_main'] == type]
             # print(self.AC_unique[type].to_string())
@@ -50,31 +50,32 @@ class data_retrieval:
 
     def KC(self):
         KC = self.data[self.data['type_appl_main'] == 'Koelcel']
-        KC = KC.loc[:, self.main_keys + self.bat_keys]
+        KC = KC.loc[:, self.main_keys + self.KC_keys]
         for type in self.unique_type_flex:
             self.KC_unique[type] = KC[KC['type_flex_main'] == type]
             # print(self.KC_unique[type].to_string())
         #print(KC.to_string())
         return self.KC_unique
 
-    def WP(self):
+    def WP_buf(self):
         warmtepomp = self.data[self.data['type_appl_main'] == 'Warmtepomp']
         warmtepomp_buf = warmtepomp[warmtepomp['buffer_ja_buf'] == True]
-        warmtepomp_no_buf = warmtepomp[warmtepomp['buffer_ja_buf'] == False]
         warmtepomp_buf = warmtepomp_buf.loc[:, self.main_keys + self.WP_keys_buf]
-        warmtepomp_no_buf = warmtepomp_no_buf.loc[:, self.main_keys + self.WP_keys_no_buf]
         for type in self.unique_type_flex:
             self.WP_buffer_unique[type] = warmtepomp_buf[warmtepomp_buf['type_flex_main'] == type]
+        return self.WP_buffer_unique
+
+    def WP_no_buf(self):
+        warmtepomp = self.data[self.data['type_appl_main'] == 'Warmtepomp']
+        warmtepomp_no_buf = warmtepomp[warmtepomp['buffer_ja_buf'] == False]
+        warmtepomp_no_buf = warmtepomp_no_buf.loc[:, self.main_keys + self.WP_keys_no_buf]
+        for type in self.unique_type_flex:
             self.WP_no_buffer_unique[type] = warmtepomp_no_buf[warmtepomp_no_buf['type_flex_main'] == type]
-            # print(self.WP_no_buffer_unique[type].to_string())
-            # print(self.WP_buffer_unique[type].to_string())
-        #print(warmtepomp_buf.to_string())
-        #print(warmtepomp_no_buf.to_string())
-        return self.WP_buffer_unique, self.WP_no_buffer_unique
+        return self.WP_no_buffer_unique
 
     def WWB(self):
         WWB = self.data[self.data['type_appl_main'] == 'Warm water boiler']
-        WWB = WWB.loc[:, self.main_keys + self.bat_keys]
+        WWB = WWB.loc[:, self.main_keys + self.WWB_keys]
         for type in self.unique_type_flex:
             self.WWB_unique[type] = WWB[WWB['type_flex_main'] == type]
             # print(self.WWB_unique[type].to_string())
@@ -83,7 +84,7 @@ class data_retrieval:
 
     def overig(self):
         overig = self.data[self.data['type_appl_main'] == 'Overig']
-        overig = overig.loc[:, self.main_keys + self.bat_keys]
+        overig = overig.loc[:, self.main_keys + self.overig_keys]
         for type in self.unique_type_flex:
             self.overig_unique[type] = overig[overig['type_flex_main'] == type]
             # print(self.overig_unique[type].to_string())
@@ -91,4 +92,4 @@ class data_retrieval:
         return self.overig_unique
 
     def get_all(self):
-        return self.batterij(), self.EVlaadpaal(), self.AC(), self.KC(), self.WP(), self.WWB(), self.overig()
+        return self.batterij(), self.EVlaadpaal(), self.AC(), self.KC(), self.WP_buf(), self.WP_no_buf(), self.WWB(), self.overig()
