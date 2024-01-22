@@ -8,7 +8,7 @@ from model import model
 
 class optimizer:
     def __init__(self):
-        self.horizon = 97
+        self.horizon = 96
         self.model = pyomo.ConcreteModel()
         self.model_imbalance = model(self.model)
         self.model.horizon = self.horizon
@@ -45,29 +45,71 @@ class optimizer:
             print('3', result)
             print('Solver Status:', result.solver.status)
 
-        varA = pd.Series(self.model.varA.extract_values(), name=self.model.varA.name)
-        varB = pd.Series(self.model.varB.extract_values(), name=self.model.varB.name)
-        varC = pd.Series(self.model.varC.extract_values(), name=self.model.varC.name)
-        print('varA', self.model.varA.extract_values())
-        print('varB', self.model.varB.extract_values())
-        print('varC', self.model.varC.extract_values())
+        temp_forecast = pd.Series(self.model.temp_forecast.extract_values(), name=self.model.temp_forecast.name)
+        temp_actual = pd.Series(self.model.temp_actual.extract_values(), name=self.model.temp_actual.name)
+        solar_forecast = pd.Series(self.model.solar_forecast.extract_values(), name=self.model.solar_forecast.name)
+        solar_actual = pd.Series(self.model.solar_actual.extract_values(), name=self.model.solar_actual.name)
+        wind_forecast = pd.Series(self.model.wind_forecast.extract_values(), name=self.model.wind_forecast.name)
+        wind_actual = pd.Series(self.model.wind_actual.extract_values(), name=self.model.wind_actual.name)
+        consumption_forecast = pd.Series(self.model.consumption_forecast.extract_values(), name=self.model.consumption_forecast.name)
+        consumption_actual = pd.Series(self.model.consumption_actual.extract_values(), name=self.model.consumption_actual.name)
+
+
+        print('epex', self.model.epex_price.extract_values())
+        print('temperature forecast', self.model.temp_forecast.extract_values())
+        print('temperature actual', self.model.temp_actual.extract_values())
+        print('solar forecast', self.model.solar_forecast.extract_values())
+        print('solar actual', self.model.solar_actual.extract_values())
+        print('wind forecast', self.model.wind_forecast.extract_values())
+        print('wind actual', self.model.wind_actual.extract_values())
+        print('consumption forecast', self.model.consumption_forecast.extract_values())
+        print('consumption actual', self.model.consumption_actual.extract_values())
 
         # X TICK LABELS
         x = np.arange(0, 96, 8)
         x = np.append(x, 96)
         x_ticks_labels = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00','20:00', '22:00', '00:00']
         # #x_ticks_labels = x_ticks_labels[int(current_interval / 8):]
-        fig, ax = plt.subplots(1, figsize=(15, 7))
+        fig, ax = plt.subplots(5,1, figsize=(15,10))
 
-        ax.plot(varA, label='varA', color='m')
-        ax.plot(varB, label='varB', color='g')
-        # ax.plot(-cold_setting[current_interval:], label='cooling SP', color='c')
-        # ax.plot(heat_setting[current_interval:], label='building heating', color='k')
-        # ax.plot(Buffer_charge[current_interval:], label='buffer heating', color='y')
-        ax.set(xlabel='time (h)', ylabel='value', title='figure 1')
-        ax.set_xticks(x)
-        ax.set_xticklabels(x_ticks_labels)
-        ax.grid()
-        ax.legend()
+        ax[0].plot(temp_forecast, label='Temperature forecast', color='m')
+        ax[0].plot(temp_actual, label='Temperature actual', color='g')
+        ax[0].set(xlabel='time (h)', ylabel='Temp [C]')
+        ax[0].set_xticks(x)
+        ax[0].set_xticklabels(x_ticks_labels)
+        ax[0].grid()
+        ax[0].legend()
 
-        #plt.show()
+        ax[1].plot(solar_forecast, label='Solar forecast', color='m')
+        ax[1].plot(solar_actual, label='Solar actual', color='g')
+        ax[1].set(xlabel='time (h)', ylabel='Production in MWh')
+        ax[1].set_xticks(x)
+        ax[1].set_xticklabels(x_ticks_labels)
+        ax[1].grid()
+        ax[1].legend()
+
+        ax[2].plot(wind_forecast, label='Wind forecast', color='m')
+        ax[2].plot(wind_actual, label='Wind actual', color='g')
+        ax[2].set(xlabel='time (h)', ylabel='Production in MWh')
+        ax[2].set_xticks(x)
+        ax[2].set_xticklabels(x_ticks_labels)
+        ax[2].grid()
+        ax[2].legend()
+
+        ax[3].plot(consumption_forecast, label='Consumption forecast', color='m')
+        ax[3].plot(consumption_actual, label='Consumption actual', color='g')
+        ax[3].set(xlabel='time (h)', ylabel='Production in MWh')
+        ax[3].set_xticks(x)
+        ax[3].set_xticklabels(x_ticks_labels)
+        ax[3].grid()
+        ax[3].legend()
+
+        ax[4].plot(consumption_forecast+wind_forecast+solar_forecast, label='Total forecast', color='m')
+        ax[4].plot(consumption_actual+wind_actual+solar_actual, label='Total actual', color='g')
+        ax[4].set(xlabel='time (h)', ylabel='Production in MWh')
+        ax[4].set_xticks(x)
+        ax[4].set_xticklabels(x_ticks_labels)
+        ax[4].grid()
+        ax[4].legend()
+
+        plt.show()
