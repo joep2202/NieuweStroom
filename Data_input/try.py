@@ -3,17 +3,11 @@ import pandas as pd
 
 # Create a concrete Pyomo model
 model = ConcreteModel()
-biedprijsladder = pd.read_csv('data/biedprijsladder.csv')
-columns_to_drop = ['Datum', 'Start', 'Einde']
-biedprijsladder = biedprijsladder[biedprijsladder['Volume'] <= 70]
-biedprijsladder = biedprijsladder.drop(columns=columns_to_drop)
-biedprijsladder = biedprijsladder.reset_index(drop=True)
-biedprijsladders = {}
-print(biedprijsladder)
-for x in range(96):
-     biedprijsladders[x] = biedprijsladder[biedprijsladder['ISP'] == x]
-     biedprijsladders[x] = biedprijsladders[x].reset_index()
-
+onbalanskosten = pd.read_csv('data/onbalanskosten_28_11_23.csv')
+columns_to_drop = ['datum', 'PTE','periode_van', 'periode_tm', 'indicatie noodvermogen op', 'indicatie noodvermogen af', 'prikkelcomponent']
+onbalanskosten = onbalanskosten.drop(columns=columns_to_drop)
+#onbalanskosten = onbalanskosten.reset_index(drop=True)
+print(onbalanskosten)
 #print(biedprijsladders)
 # Define index sets for the three dimensions
 model.i = RangeSet(96)  # First dimension

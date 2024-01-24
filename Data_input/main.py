@@ -3,10 +3,18 @@ from keys_creation import keys
 from imbalance_optimzer import optimizer
 import pandas as pd
 
+day_one = False
 
+
+if day_one:
+    data_grid = pd.read_csv('data/ExtData_19-11-23.csv', index_col=0)
+    onbalanskosten = pd.read_csv('data/onbalanskosten_19_11_23.csv')
+elif not day_one:
+    data_grid = pd.read_csv('data/ExtData_28-11-23.csv', index_col=0)
+    onbalanskosten = pd.read_csv('data/onbalanskosten_28_11_23.csv')
 data_retr = data_retrieval()
 keys = keys()
-optimizer_imbalance = optimizer()
+optimizer_imbalance = optimizer(data_grid=data_grid, onbalanskosten=onbalanskosten)
 
 appl = ['batterij', 'EVlaadpaal', 'AC', 'KC', 'WP_buf', 'WP_no_buf', 'WWB', 'overig']
 main_keys = ['appl_id_main','PiekAansluiting_main', 'type_flex_main']
