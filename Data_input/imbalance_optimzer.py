@@ -17,7 +17,7 @@ class optimizer:
 
     # Optimizer, add this to objectives
     def ObjectiveFunction(self, model):
-        return sum([model.varA[t] for t in model.Time])
+        return sum([model.difference_MWh[t] for t in model.Time])
 
     def run(self, batterij, time_list_valid):
         self.model_imbalance.run_model(batterij=batterij, time_list_valid=time_list_valid)
@@ -53,17 +53,25 @@ class optimizer:
         wind_actual = pd.Series(self.model.wind_actual.extract_values(), name=self.model.wind_actual.name)
         consumption_forecast = pd.Series(self.model.consumption_forecast.extract_values(), name=self.model.consumption_forecast.name)
         consumption_actual = pd.Series(self.model.consumption_actual.extract_values(), name=self.model.consumption_actual.name)
+        total_forecast = pd.Series(self.model.total_forecast.extract_values(), name=self.model.total_forecast.name)
+        total_actual = pd.Series(self.model.total_actual.extract_values(), name=self.model.total_actual.name)
 
 
-        print('epex', self.model.epex_price.extract_values())
-        print('temperature forecast', self.model.temp_forecast.extract_values())
-        print('temperature actual', self.model.temp_actual.extract_values())
-        print('solar forecast', self.model.solar_forecast.extract_values())
-        print('solar actual', self.model.solar_actual.extract_values())
-        print('wind forecast', self.model.wind_forecast.extract_values())
-        print('wind actual', self.model.wind_actual.extract_values())
-        print('consumption forecast', self.model.consumption_forecast.extract_values())
-        print('consumption actual', self.model.consumption_actual.extract_values())
+        # print('epex', self.model.epex_price.extract_values())
+        # print('temperature forecast', self.model.temp_forecast.extract_values())
+        # print('temperature actual', self.model.temp_actual.extract_values())
+        # print('solar forecast', self.model.solar_forecast.extract_values())
+        # print('solar actual', self.model.solar_actual.extract_values())
+        # print('wind forecast', self.model.wind_forecast.extract_values())
+        # print('wind actual', self.model.wind_actual.extract_values())
+        # print('consumption forecast', self.model.consumption_forecast.extract_values())
+        # print('consumption actual', self.model.consumption_actual.extract_values())
+        print('biedprijsladder', self.model.biedprijsladder.extract_values())
+        print('difference af', self.model.difference_MWh_afregelen.extract_values())
+        print('difference op', self.model.difference_MWh_opregelen.extract_values())
+        print('difference', self.model.difference_MWh.extract_values())
+        print('imbalance cost before flex', self.model.imbalance_costs_before_flex.extract_values())
+        print('difference to 10 opregelen', self.model.difference_MWh_round_to_ten_opregelen.extract_values())
 
         # X TICK LABELS
         x = np.arange(0, 96, 8)
@@ -104,12 +112,12 @@ class optimizer:
         ax[3].grid()
         ax[3].legend()
 
-        ax[4].plot(consumption_forecast+wind_forecast+solar_forecast, label='Total forecast', color='m')
-        ax[4].plot(consumption_actual+wind_actual+solar_actual, label='Total actual', color='g')
+        ax[4].plot(total_forecast, label='Total forecast', color='m')
+        ax[4].plot(total_actual, label='Total actual', color='g')
         ax[4].set(xlabel='time (h)', ylabel='Production in MWh')
         ax[4].set_xticks(x)
         ax[4].set_xticklabels(x_ticks_labels)
         ax[4].grid()
         ax[4].legend()
 
-        plt.show()
+        #plt.show()

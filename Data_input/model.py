@@ -15,6 +15,11 @@ class model:
         self.wind_actual = self.data_grid['wind_actual']
         self.consumption_forecast = self.data_grid['consumption_forecast']
         self.consumption_actual = self.data_grid['consumption_actual']
+        self.biedprijsladder = pd.read_csv('data/biedprijsladder.csv')
+        self.columns_to_drop = ['Datum', 'Start', 'Einde']
+        self.biedprijsladder = self.biedprijsladder[self.biedprijsladder['Volume'] <= 70]
+        self.biedprijsladder = self.biedprijsladder.drop(columns=self.columns_to_drop)
+        self.biedprijsladder = self.biedprijsladder.reset_index(drop=True)
 
 
     def run_model(self, batterij, time_list_valid):
@@ -23,14 +28,26 @@ class model:
         self.constraints()
 
     def variable(self):
-        self.model.varA = pyomo.Var(self.model.Time, within=pyomo.NonNegativeIntegers)
-        self.model.varB = pyomo.Var(self.model.Time, bounds=(5, 10), within=pyomo.NonNegativeIntegers)
-        self.model.varC = pyomo.Var(self.model.Time, bounds=(1, 5), within=pyomo.NonNegativeIntegers)
+        self.model.imbalance_costs_before_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.imbalance_costs_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
+
+        self.model.difference_MWh = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.difference_MWh_afregelen = pyomo.Var(self.model.Time, within=pyomo.NonNegativeReals)
+        self.model.difference_MWh_opregelen = pyomo.Var(self.model.Time, within=pyomo.NonNegativeReals)
+        self.model.difference_MWh_round_to_ten_opregelen = pyomo.Var(self.model.Time, within=pyomo.NonNegativeIntegers)
+        self.model.try_boolean = pyomo.Var(self.model.Time, within=pyomo.NonNegativeIntegers)
+
+        self.model.total_forecast = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.total_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.total_actual = pyomo.Var(self.model.Time, within=pyomo.Any)
+
+        self.model.boolean_difference_afregelen = pyomo.Var(self.model.Time, within=pyomo.Binary)
+        self.model.boolean_difference_opregelen = pyomo.Var(self.model.Time, within=pyomo.Binary)
 
     def parameters(self, batterij, time_list_valid):
         self.batterij = batterij
         self.time_lists = pd.DataFrame.from_dict(time_list_valid)
-        print(batterij)
+        #print(batterij)
 
         self.epex_price_dict = {}
         for index, value in enumerate(self.epex):
@@ -84,14 +101,61 @@ class model:
         def info_batterij_metopwek(model, i, j):
             return self.batterij.iloc[j, i]
 
+        # def biedprijsladder(model, i, j):
+        #     return self.biedprijsladder.iloc[j, i]
+
         self.model.range_options_batterij_metopwek = pyomo.Set(initialize=range(self.time_lists.shape[1]))
         #self.model.range_options_info_len_batterij_metopwek = pyomo.Set(initialize=range(len(self.batterij)))
         self.model.range_options_info_shape_batterij_metopwek = pyomo.Set(initialize=range(self.batterij.shape[1]))
         self.model.time_valid_batterij_metopwek = pyomo.Param(self.model.range_options_batterij_metopwek, self.model.Time, mutable=True, initialize=time_list_batterij_metopwek, within=pyomo.Any)
         self.model.info_batterij_metopwek = pyomo.Param(self.model.range_options_info_shape_batterij_metopwek, self.model.range_options_batterij_metopwek, mutable=True, initialize=info_batterij_metopwek,within=pyomo.Any)
 
+        self.model.range_options_biedprijsladder_1 = pyomo.Set(initialize=range(7))
+        self.model.range_options_biedprijsladder_2 = pyomo.Set(initialize=range(4))
+        #print(self.biedprijsladder)
+        #model.param_3d = Param(model.i, model.j, model.k,initialize={(i, j, k): biedprijsladder.iloc[7 * (i - 1) + j - 1, k - 1] for i in model.i for j in model.j for k in model.k})
+        self.model.biedprijsladder = pyomo.Param(self.model.Time,  self.model.range_options_biedprijsladder_1, self.model.range_options_biedprijsladder_2, mutable=True, initialize={(i, j, k): self.biedprijsladder.iloc[7 * (i) + j, k] for i in self.model.Time for j in self.model.range_options_biedprijsladder_1 for k in self.model.range_options_biedprijsladder_2}, within=pyomo.Any)
+
 
     def constraints(self):
-        def time_constraint(model, t):
-            return model.varA[t] == sum(model.time_valid_batterij_metopwek[x, t] * model.varB[t] for x in self.model.range_options_batterij_metopwek)
-        self.model.time_constraint = pyomo.Constraint(self.model.Time, rule=time_constraint)
+        def total_assumed(model,t):
+            return model.total_forecast[t] == model.solar_forecast[t] + model.wind_forecast[t] + model.consumption_forecast[t]
+        self.model.total_assumed = pyomo.Constraint(self.model.Time, rule=total_assumed)
+
+        def total_realized(model,t):
+            return model.total_actual[t] == model.solar_actual[t] + model.wind_actual[t] + model.consumption_actual[t]
+        self.model.total_realized = pyomo.Constraint(self.model.Time, rule=total_realized)
+
+        def difference_in_MWh_afregelen(model,t):
+            return model.difference_MWh_afregelen[t] == (model.total_forecast[t] - model.total_actual[t]) * model.boolean_difference_afregelen[t]
+        self.model.difference_in_MWh_afregelen = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_afregelen)
+
+        def difference_in_MWh_opregelen(model,t):
+            return model.difference_MWh_opregelen[t] == (model.total_actual[t]-model.total_forecast[t]) * model.boolean_difference_opregelen[t]
+        self.model.difference_in_MWh_opregelen = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_opregelen)
+
+        def difference_in_MWh_boolean(model,t):
+            return  model.boolean_difference_afregelen[t] + model.boolean_difference_opregelen[t] == 1
+        self.model.difference_in_MWh_boolean = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_boolean)
+
+        def difference_in_MWh(model,t):
+            return model.difference_MWh[t] == model.difference_MWh_afregelen[t] + model.difference_MWh_opregelen[t]
+        self.model.difference_in_MWh = pyomo.Constraint(self.model.Time, rule=difference_in_MWh)
+
+        def round_to_ten_opregelen(model,t):
+            return model.difference_MWh_round_to_ten_opregelen[t] == 10*model.try_boolean[t]
+        self.model.round_to_ten_opregelen = pyomo.Constraint(self.model.Time, rule=round_to_ten_opregelen)
+
+        def round_to_ten_opregelen_2(model,t):
+            return model.difference_MWh_round_to_ten_opregelen[t] >= model.difference_MWh_opregelen[t]
+        self.model.round_to_ten_opregelen_2 = pyomo.Constraint(self.model.Time, rule=round_to_ten_opregelen_2)
+
+        def round_to_ten_opregelen_3(model,t):
+            return model.difference_MWh_round_to_ten_opregelen[t] <= model.difference_MWh_opregelen[t] + 10
+        self.model.round_to_ten_opregelen_3 = pyomo.Constraint(self.model.Time, rule=round_to_ten_opregelen_3)
+
+
+
+        def imbalance_cost(model,t):
+            return model.imbalance_costs_before_flex[t] == (model.difference_MWh_opregelen[t] * model.biedprijsladder[t,0,3]) + (model.difference_MWh_afregelen[t] * model.biedprijsladder[t,0,2])
+        self.model.imbalance_cost = pyomo.Constraint(self.model.Time, rule=imbalance_cost)
