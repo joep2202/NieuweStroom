@@ -1,35 +1,38 @@
-from pyomo.environ import ConcreteModel, Param, RangeSet, Var, Objective, Constraint, SolverFactory
-import pandas as pd
+import requests
+import json
 
-# Create a concrete Pyomo model
-model = ConcreteModel()
-onbalanskosten = pd.read_csv('data/onbalanskosten_28_11_23.csv')
-columns_to_drop = ['datum', 'PTE','periode_van', 'periode_tm', 'indicatie noodvermogen op', 'indicatie noodvermogen af', 'prikkelcomponent']
-onbalanskosten = onbalanskosten.drop(columns=columns_to_drop)
-#onbalanskosten = onbalanskosten.reset_index(drop=True)
-print(onbalanskosten)
-#print(biedprijsladders)
-# Define index sets for the three dimensions
-model.i = RangeSet(96)  # First dimension
-model.j = RangeSet(7)  # Second dimension
-model.k = RangeSet(4)  # Third dimension
+# Replace 'your_api_key' with the actual API key if required
+api_key = 'eyJvcmciOiI1ZTU1NGUxOTI3NGE5NjAwMDEyYTNlYjEiLCJpZCI6ImRmYjZjMjQyMDU0OTRiZTY4OTcwMjUxOWUzNWI1MzVjIiwiaCI6Im11cm11cjEyOCJ9'
 
+# Replace 'your_api_endpoint' with the actual API endpoint
+api_endpoint = 'https://api.dataplatform.knmi.nl/open-data/v1/datasets/Actuele10mindataKNMIstations/versions/2/files'
 
-def biedprijsladder_def(model, i, j):
-    return biedprijsladder.iloc[j, i]
+# Set up the headers with the API key (if required)
+headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
 
-# Create a 3D parameter that depends on all three dimensions
-#model.param_3d = Param(model.i, model.j, model.k, initialize={(i, j, k): i + j + k for i in model.i for j in model.j for k in model.k})
-model.param_3d = Param(model.i, model.j, model.k, initialize={(i, j, k): biedprijsladder.iloc[7*(i-1)+j-1, k-1] for i in model.i for j in model.j for k in model.k})
-# Display the Pyomo model
-model.display()
-#model.pprint()
+# Make the GET request to the KNMI API
+response = requests.get(api_endpoint, headers=headers)
 
-#print(model.param_3d.extract_values())
-# Accessing parameter values
-# for i in model.i:
-#     for j in model.j:
-#         for k in model.k:
-#             #print(biedprijsladder.iloc[7*(i-1)+j-1, k-1])
-#             print(f"param_3d[{i},{j},{k}] = {model.param_3d[i, j, k]}")
-#             # print(7*(i-1)+j, k)
+# Check if the request was successful (status code 200)
+if response.status_code == 200:
+    # Parse and display the response JSON
+    files  = response.json()
+    print(files["files"][0])
+    # print("Structure of the response:")
+    # print(json.dumps(files, indent=2))
+    if files:
+        first_file_url = files["files"][0]['filename']
+        file_response = requests.get(first_file_url, headers=headers)
+
+        # Check if the request for the specific file was successful
+        if file_response.status_code == 200:
+            # Parse and display the content of the first file
+            file_data = file_response.json()
+            print(json.dumps(file_data, indent=2))
+        else:
+            print(f"Error retrieving file: {file_response.status_code}, {file_response.text}")
+    else:
+        print("No files available.")
+else:
+    # Print an error message if the request was not successful
+    print(f"Error: {response.status_code}, {response.text}")
