@@ -50,7 +50,8 @@ class model:
         self.model.total_forecast = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_trading = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.total_forecast_hour = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.total_forecast_hour_v_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.total_forecast_hour_e_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
 
         self.model.range_options_onbalans = pyomo.Set(initialize=range(self.onbalanskosten.shape[1]-1))
         self.model.boolean_select_imbalance = pyomo.Var(self.model.Time,self.model.range_options_onbalans, within=pyomo.Binary)
@@ -142,24 +143,30 @@ class model:
             return model.total_forecast[t] == model.solar_forecast[t] + model.wind_forecast[t] + model.consumption_forecast[t]
         self.model.total_assumed = pyomo.Constraint(self.model.Time, rule=total_assumed)
 
-        def total_with_trading(model,t):
-            return model.total_forecast_trading[t] == model.total_forecast[t] + model.trading_volume[t]
-        self.model.total_with_trading = pyomo.Constraint(self.model.Time, rule=total_with_trading)
+        # def total_with_trading(model,t):
+        #     return model.total_forecast_trading[t] == model.total_forecast[t] + model.trading_volume[t]
+        # self.model.total_with_trading = pyomo.Constraint(self.model.Time, rule=total_with_trading)
 
-        def total_assumed_hour(model,t):
+        def total_assumed_hour_V(model,t):
             if t % 4 == 0:
                 self.total_hour_variable = t
-            return model.total_forecast_hour[t] == (model.total_forecast_trading[0+self.total_hour_variable] + model.total_forecast_trading[1+self.total_hour_variable] + model.total_forecast_trading[2+self.total_hour_variable] + model.total_forecast_trading[3+self.total_hour_variable])/4
-        self.model.total_assumed_hour = pyomo.Constraint(self.model.Time, rule=total_assumed_hour)
+            return model.total_forecast_hour_v_programma[t] == ((model.total_forecast[0+self.total_hour_variable] + model.total_forecast[1+self.total_hour_variable] + model.total_forecast[2+self.total_hour_variable] + model.total_forecast[3+self.total_hour_variable])/4) + + model.trading_volume[t]
+        self.model.total_assumed_hour_V = pyomo.Constraint(self.model.Time, rule=total_assumed_hour_V)
+
+        def total_assumed_hour_E(model, t):
+            if t % 4 == 0:
+                self.total_hour_variable = t
+            return model.total_forecast_hour_e_programma[t] == ((model.total_forecast[0 + self.total_hour_variable] + model.total_forecast[1 + self.total_hour_variable] +model.total_forecast[2 + self.total_hour_variable] + model.total_forecast[3 + self.total_hour_variable]) / 4)
+        self.model.total_assumed_hour_E = pyomo.Constraint(self.model.Time, rule=total_assumed_hour_E)
 
 
         #Calculate the difference between forecasted total and actual total done seperately to be able to calculate imbalance cost.
         def difference_in_MWh_afregelen(model,t):
-            return model.difference_MWh_afregelen[t] == (model.total_forecast_hour[t] - model.totaal_allocatie[t]) * model.boolean_difference_afregelen[t]
+            return model.difference_MWh_afregelen[t] == (model.total_forecast_hour_v_programma[t] - model.totaal_allocatie[t]) * model.boolean_difference_afregelen[t]
         self.model.difference_in_MWh_afregelen = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_afregelen)
 
         def difference_in_MWh_opregelen(model,t):
-            return model.difference_MWh_opregelen[t] == (model.totaal_allocatie[t]-model.total_forecast_hour[t]) * model.boolean_difference_opregelen[t]
+            return model.difference_MWh_opregelen[t] == (model.totaal_allocatie[t]-model.total_forecast_hour_v_programma[t]) * model.boolean_difference_opregelen[t]
         self.model.difference_in_MWh_opregelen = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_opregelen)
 
         def difference_in_MWh_boolean(model,t):
@@ -167,7 +174,7 @@ class model:
         self.model.difference_in_MWh_boolean = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_boolean)
 
         def difference_in_MWh_plot(model,t):
-            return model.difference_MWh_plot[t] ==  model.total_forecast_hour[t] - model.totaal_allocatie[t]
+            return model.difference_MWh_plot[t] ==  model.total_forecast_hour_v_programma[t] - model.totaal_allocatie[t]
         self.model.difference_in_MWh_plot = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_plot)
 
         def select_onbalans_price(model,t):

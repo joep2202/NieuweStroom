@@ -3,12 +3,12 @@ from keys_creation import keys
 from imbalance_optimzer import optimizer
 import pandas as pd
 
-day_one = False
+day_one = True
 
 
 if day_one:
-    data_grid = pd.read_csv('data/ExtData_19-11-23.csv', index_col=0)
-    onbalanskosten = pd.read_csv('data/onbalanskosten_19_11_23.csv')
+    data_grid = pd.read_csv('data/ExtData_10-12-23.csv', index_col=0)
+    onbalanskosten = pd.read_csv('data/onbalanskosten_10_12_23.csv')
 elif not day_one:
     data_grid = pd.read_csv('data/ExtData_28-11-23.csv', index_col=0)
     onbalanskosten = pd.read_csv('data/onbalanskosten_28_11_23.csv')
