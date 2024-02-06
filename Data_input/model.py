@@ -2,11 +2,12 @@ import pandas as pd
 import pyomo.environ as pyomo
 
 class model:
-    def __init__(self, model, data_grid, onbalanskosten):
+    def __init__(self, model, data_grid, onbalanskosten, current_interval):
         self.model = model
         self.time_lists_param = {}
         self.data_grid = data_grid
         self.onbalanskosten = onbalanskosten
+        self.current_interval = current_interval
         self.epex = self.data_grid['EPEX']
         self.temperature_forecast = self.data_grid['temperature_forecast']
         self.temperature_actual = self.data_grid['temperature_actual']
@@ -55,6 +56,10 @@ class model:
 
         self.model.range_options_onbalans = pyomo.Set(initialize=range(self.onbalanskosten.shape[1]-1))
         self.model.boolean_select_imbalance = pyomo.Var(self.model.Time,self.model.range_options_onbalans, within=pyomo.Binary)
+
+        self.model.solar_difference = pyomo.Var(self.model.Time,bounds=(-100,100), within=pyomo.Reals)
+        self.model.wind_difference = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
+        self.model.relevant_difference = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
 
     def parameters(self, batterij, time_list_valid):
         self.batterij = batterij
@@ -201,6 +206,8 @@ class model:
         def imbalance_costs_total(model,t):
             if t == 0:
                 return model.imbalance_costs_before_flex_total[t] == model.imbalance_costs_before_flex_epex[t]
+            elif t == self.current_interval:
+                return model.imbalance_costs_before_flex_total[t] == model.imbalance_costs_before_flex_epex[t]
             else:
                 return model.imbalance_costs_before_flex_total[t] == model.imbalance_costs_before_flex_total[t - 1] + model.imbalance_costs_before_flex_epex[t]
         self.model.imbalance_costs_total = pyomo.Constraint(self.model.Time, rule=imbalance_costs_total)
@@ -213,6 +220,18 @@ class model:
         def imbalance_cost_opregelen(model,t):
             return model.imbalance_opregelen[t] == (model.onbalanskosten[t,0]*model.boolean_select_imbalance[t,0])+(model.onbalanskosten[t,1]*model.boolean_select_imbalance[t,1])+(model.onbalanskosten[t,3]*model.boolean_select_imbalance[t,2])+((model.onbalanskosten[t,0])*model.boolean_select_imbalance[t,3])
         self.model.imbalance_cost_opregelen = pyomo.Constraint(self.model.Time, rule=imbalance_cost_opregelen)
+
+        def solar_dif(model,t):
+            return model.solar_difference[t] == model.solar_actual[t] - model.solar_forecast[t]
+        self.model.solar_dif = pyomo.Constraint(self.model.Time, rule=solar_dif)
+
+        def wind_dif(model,t):
+            return model.wind_difference[t] == model.wind_actual[t] - model.wind_forecast[t]
+        self.model.wind_dif = pyomo.Constraint(self.model.Time, rule=wind_dif)
+
+        def relevant_dif(model,t):
+            return model.relevant_difference[t] ==  model.wind_difference[t] + model.solar_difference[t]
+        self.model.relevant_dif = pyomo.Constraint(self.model.Time, rule=relevant_dif)
 
 
 

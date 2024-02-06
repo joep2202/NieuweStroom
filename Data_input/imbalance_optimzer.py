@@ -7,10 +7,11 @@ from model import model
 
 
 class optimizer:
-    def __init__(self, data_grid, onbalanskosten):
+    def __init__(self, data_grid, onbalanskosten, current_interval):
         self.horizon = 96
         self.model = pyomo.ConcreteModel()
-        self.model_imbalance = model(self.model, data_grid=data_grid, onbalanskosten=onbalanskosten)
+        self.current_interval = current_interval
+        self.model_imbalance = model(self.model, data_grid=data_grid, onbalanskosten=onbalanskosten , current_interval=self.current_interval)
         self.model.horizon = self.horizon
         self.model.Time = pyomo.RangeSet(0, self.model.horizon - 1)
         self.solver_time_limit = 60
@@ -70,6 +71,9 @@ class optimizer:
         epex_price = pd.Series(self.model.epex_price.extract_values(),name=self.model.epex_price.name)
         used_price = pd.Series(self.model.used_price.extract_values(), name=self.model.used_price.name)
         trading_volume = pd.Series(self.model.trading_volume.extract_values(), name=self.model.trading_volume.name)
+        solar_difference = pd.Series(self.model.solar_difference.extract_values(), name=self.model.solar_difference.name)
+        wind_difference = pd.Series(self.model.wind_difference.extract_values(), name=self.model.wind_difference.name)
+        relevant_difference = pd.Series(self.model.relevant_difference.extract_values(),name=self.model.relevant_difference.name)
 
 
         print('difference af', self.model.difference_MWh_afregelen.extract_values())
@@ -93,18 +97,19 @@ class optimizer:
         x_ticks_labels = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00','20:00', '22:00', '00:00']
         # #x_ticks_labels = x_ticks_labels[int(current_interval / 8):]
         fig, ax = plt.subplots(6,1, figsize=(15,12))
-        fig, axes = plt.subplots(2, 1, figsize=(15, 10))
+        fig, axes = plt.subplots(2, 1, figsize=(15, 12))
+        fig, ax2 = plt.subplots(2, 1, figsize=(15, 12))
 
-        ax[0].plot(temp_forecast, label='Temperature forecast', color='m')
-        ax[0].plot(temp_actual, label='Temperature actual', color='g')
+        ax[0].plot(temp_forecast[self.current_interval:], label='Temperature forecast', color='m')
+        ax[0].plot(temp_actual[self.current_interval:], label='Temperature actual', color='g')
         ax[0].set(xlabel='time (h)', ylabel='Temp [C]')
         ax[0].set_xticks(x)
         ax[0].set_xticklabels(x_ticks_labels)
         ax[0].grid()
         ax[0].legend()
 
-        ax[1].plot(solar_forecast, label='Solar forecast', color='m')
-        ax[1].plot(solar_actual, label='Solar actual', color='g')
+        ax[1].plot(solar_forecast[self.current_interval:], label='Solar forecast', color='m')
+        ax[1].plot(solar_actual[self.current_interval:], label='Solar actual', color='g')
         ax[1].axhline(0, color='black', linestyle='--', linewidth=1)
         ax[1].set(xlabel='time (h)', ylabel='Prod in MWh')
         ax[1].set_xticks(x)
@@ -112,8 +117,8 @@ class optimizer:
         ax[1].grid()
         ax[1].legend()
 
-        ax[2].plot(wind_forecast, label='Wind forecast', color='m')
-        ax[2].plot(wind_actual, label='Wind actual', color='g')
+        ax[2].plot(wind_forecast[self.current_interval:], label='Wind forecast', color='m')
+        ax[2].plot(wind_actual[self.current_interval:], label='Wind actual', color='g')
         ax[2].axhline(0, color='black', linestyle='--', linewidth=1)
         ax[2].set(xlabel='time (h)', ylabel='Prod in MWh')
         ax[2].set_xticks(x)
@@ -121,19 +126,19 @@ class optimizer:
         ax[2].grid()
         ax[2].legend()
 
-        ax[3].plot(consumption_forecast, label='Consumption forecast', color='m')
-        ax[3].plot(consumption_actual, label='Consumption actual', color='g')
+        ax[3].plot(consumption_forecast[self.current_interval:], label='Consumption forecast', color='m')
+        ax[3].plot(consumption_actual[self.current_interval:], label='Consumption actual', color='g')
         ax[3].set(xlabel='time (h)', ylabel='Prod in MWh')
         ax[3].set_xticks(x)
         ax[3].set_xticklabels(x_ticks_labels)
         ax[3].grid()
         ax[3].legend()
 
-        ax[4].plot(imbalance_afregelen, label='Onbalans afregelen', color='m')
+        ax[4].plot(imbalance_afregelen[self.current_interval:], label='Onbalans afregelen', color='m')
         #ax[4].plot(self.price_check['MoneyLong'], label='Onbalans afregelen', color='m', alpha=0.5)
-        ax[4].plot(imbalance_opregelen, label='Onbalans opregelen', color='g')
+        ax[4].plot(imbalance_opregelen[self.current_interval:], label='Onbalans opregelen', color='g')
         #ax[4].plot(self.price_check['MoneyShort'], label='Onbalans opregelen', color='g', alpha=0.5)
-        ax[4].plot(epex_price, label='EPEX', color='b')
+        ax[4].plot(epex_price[self.current_interval:], label='EPEX', color='b')
         #ax[4].plot(self.price_check['Epex'], label='EPEX', color='b', alpha=0.5)
         ax[4].axhline(0, color='black', linestyle='--', linewidth=1)
         ax[4].set(xlabel='time (h)', ylabel='eur/MWh')
@@ -144,7 +149,7 @@ class optimizer:
 
         #ax[5].plot(difference_MWh_opregelen, label='Volume afregelen', color='m')
         ax[5].axhline(0,color='black', linestyle='--', linewidth=1)
-        ax[5].plot(difference_MWh_plot, label='Volume verschil', color='b')
+        ax[5].plot(difference_MWh_plot[self.current_interval:], label='Volume verschil', color='b')
         #ax[5].plot(self.volume_check['Imbalance_Volume'], label='Volume verschil check', color='b', alpha=0.5)
         ax[5].set(xlabel='time (h)', ylabel='Production in MWh')
         ax[5].set_xticks(x)
@@ -152,28 +157,37 @@ class optimizer:
         ax[5].grid()
         ax[5].legend()
 
-        axes[0].plot(total_forecast, label='Total forecast', color='m')
-        axes[0].plot(total_forecast_hour_e_programma, label='Total forecast hour with trading', color='r')
-        axes[0].plot(total_forecast_hour_v_programma, label='Total forecast hour with trading', color='b')
+        axes[0].plot(total_forecast[self.current_interval:], label='Total forecast', color='m')
+        axes[0].plot(total_forecast_hour_e_programma[self.current_interval:], label='Total forecast hour with trading', color='r')
+        axes[0].plot(total_forecast_hour_v_programma[self.current_interval:], label='Total forecast hour with trading', color='b')
         #axes[0].plot(total_forecast_trading, label='Total forecast after trading', color='r')
-        axes[0].plot(totaal_allocatie, label='Total allocatie', color='g')
-        axes[0].plot(trading_volume, label='Trading volume', color='y')
+        axes[0].plot(totaal_allocatie[self.current_interval:], label='Total allocatie', color='g')
+        axes[0].plot(trading_volume[self.current_interval:], label='Trading volume', color='y')
         axes[0].set(xlabel='time (h)', ylabel='Production in MWh')
         axes[0].set_xticks(x)
         axes[0].set_xticklabels(x_ticks_labels)
         axes[0].grid()
         axes[0].legend()
 
-        axes[1].plot(imbalance_before_flex, label='Imbalance before flex', color='m')
+        axes[1].plot(imbalance_before_flex[self.current_interval:], label='Imbalance before flex', color='m')
         #axes[1].plot(self.onbalanskosten_check['ImbalanceTennetCosts'], label='Imbalance before flex check', color='m', alpha=0.5)
-        axes[1].plot(imbalance_costs_before_flex_epex, label='Imbalance before flex EPEX', color='g')
+        axes[1].plot(imbalance_costs_before_flex_epex[self.current_interval:], label='Imbalance before flex EPEX', color='g')
         #axes[1].plot(self.onbalanskosten_check['ImbalanceCosts'], label='Imbalance before flex EPEX check', color='g',alpha=0.5)
-        axes[1].plot(imbalance_before_flex_total, label='imbalance cumulatief', color='b')
+        axes[1].plot(imbalance_before_flex_total[self.current_interval:], label='imbalance cumulatief', color='b')
         #axes[1].plot(self.onbalanskosten_check['Cumulative_Imbalance_new'], label='imbalance cumulatief check', color='b', alpha=0.5)
         axes[1].set(xlabel='time (h)', ylabel='Production in MWh')
         axes[1].set_xticks(x)
         axes[1].set_xticklabels(x_ticks_labels)
         axes[1].grid()
         axes[1].legend()
+
+        ax2[0].plot(solar_difference[self.current_interval:], label='Solar difference', color='m')
+        ax2[0].plot(wind_difference[self.current_interval:], label='Wind difference', color='g')
+        ax2[0].plot(relevant_difference[self.current_interval:], label='Total difference', color='b')
+        ax2[0].set(xlabel='time (h)', ylabel='difference [MWh]')
+        ax2[0].set_xticks(x)
+        ax2[0].set_xticklabels(x_ticks_labels)
+        ax2[0].grid()
+        ax2[0].legend()
 
         plt.show()

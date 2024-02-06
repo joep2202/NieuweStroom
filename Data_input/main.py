@@ -4,7 +4,7 @@ from imbalance_optimzer import optimizer
 import pandas as pd
 
 day_one = True
-
+current_interval = 0
 
 if day_one:
     data_grid = pd.read_csv('data/ExtData_10-12-23.csv', index_col=0)
@@ -12,9 +12,10 @@ if day_one:
 elif not day_one:
     data_grid = pd.read_csv('data/ExtData_28-11-23.csv', index_col=0)
     onbalanskosten = pd.read_csv('data/onbalanskosten_28_11_23.csv')
+
 data_retr = data_retrieval()
 keys = keys()
-optimizer_imbalance = optimizer(data_grid=data_grid, onbalanskosten=onbalanskosten)
+optimizer_imbalance = optimizer(data_grid=data_grid, onbalanskosten=onbalanskosten, current_interval=current_interval)
 
 appl = ['batterij', 'EVlaadpaal', 'AC', 'KC', 'WP_buf', 'WP_no_buf', 'WWB', 'overig']
 main_keys = ['appl_id_main','PiekAansluiting_main', 'type_flex_main']
@@ -37,13 +38,13 @@ for index, appliance in enumerate(data_retr.get_all()):
 #     print(all_appliances['batterij']['Zonder opwek'].to_string())
 
 
-all_appliances['batterij']['Met opwek'].fillna(999, inplace=True)
+all_appliances['batterij']['Zonder opwek'].fillna(999, inplace=True)
 #print(all_appliances['batterij']['Met opwek'].to_string())
 
 #print(all_appliances['batterij']['Met opwek'].loc[:, main_keys + bat_keys].to_string())
 #batterij = all_appliances['batterij']['Met opwek'].loc[:, main_keys + bat_keys]
 #print(batterij.to_string())
-optimizer_imbalance.run(batterij=all_appliances['batterij']['Met opwek'].loc[:, main_keys + bat_keys], time_list_valid=time_list_valid['batterij']['Met opwek'])
+optimizer_imbalance.run(batterij=all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys], time_list_valid=time_list_valid['batterij']['Zonder opwek'])
 
 
 
