@@ -2,9 +2,11 @@ from Data_retrieval import data_retrieval
 from keys_creation import keys
 from imbalance_optimzer import optimizer
 import pandas as pd
+from TempDataRetrieval import retrieve_temp
 
 day_one = True
 current_interval = 0
+temperature_call = retrieve_temp(timestamp=20231210)
 
 if day_one:
     data_grid = pd.read_csv('data/ExtData_10-12-23.csv', index_col=0)
@@ -12,6 +14,10 @@ if day_one:
 elif not day_one:
     data_grid = pd.read_csv('data/ExtData_28-11-23.csv', index_col=0)
     onbalanskosten = pd.read_csv('data/onbalanskosten_28_11_23.csv')
+
+
+temperature = temperature_call.change_into_15min()
+print(temperature.to_string())
 
 data_retr = data_retrieval()
 keys = keys()
