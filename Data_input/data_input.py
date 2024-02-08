@@ -3,22 +3,18 @@ import pandas as pd
 import numpy as np
 import csv
 
-number_layouts = [1,2,3]
+
+#initiate drop down menu's
 appliances = ['Types', ['Batterij', 'EV laadpaal', 'Warmtepomp', 'Koelcel', 'AC', 'Warm water boiler', 'Overig']]
 type_flex = ['File', ['Gebruik', ['Limiteren van gebruik', 'Verschuiven van gebruik', ['Uitstellen', 'Naar voren schuiven', 'Beide']],
                       'Opslag', ['Mobiel (EV)', 'Batterij', ['Met opwek', 'Zonder opwek']],
                       ]]
 
-type_flex2 = ['Gebruik','Opslag']
-type_flex3 = ['Limiteren van gebruik', 'Verschuiven van gebruik']
-type_flexibiliteit = None
 size = (35, 1)
-filled_in = True
+#if it is the first entry this need to be on
 first = False
-gebruik = True
+# gebruik = True
 data = pd.DataFrame()
-check = np.array([])
-value_type = ''
 time_in_day = pd.date_range("00:00", "23:45", freq="15min").time
 
 
@@ -30,26 +26,7 @@ layout1 = [[sg.Text('Welcome to the data entry sheet for flex options', backgrou
             [sg.Text('Piek aansluiting', size =size), sg.Input(key='PiekAansluiting_main')],
             [sg.Text('Access link smartmeter', size =size), sg.Input(key='ICT_METER_main')],
             [sg.Text('Selecteer categorie', size=size), sg.ButtonMenu('Categorieën', menu_def=type_flex, key='type_flex_main')],
-            #[sg.Text('Type of appliance (indien niet in lijst vul zelf in)', size=size), sg.Combo(values=appliances, key='Appliance')],
             [sg.Text('Type appliance', size=size), sg.ButtonMenu('Type', menu_def=appliances, key='type_appl_main')],
-            #[sg.Text('Branche', size=size), sg.OptionMenu(values=menu_def_2, key='Branche')],
-            # [sg.Text('Needed information', background_color = 'darkblue')],
-            # #[sg.Text('Type of appliance', size=size), sg.OptionMenu(values=appliances, key='Appliance')],
-            #
-            # #[sg.Text('Indien overig', size =size), sg.Input(key='overig_type')],
-            # [sg.Text('Maximale capaciteit in kW', size =size), sg.Input(key='max_KW')],
-            # [sg.Text('Gemiddelde gebruikstijd in uur', size =size), sg.Input(key='duration')],
-            # [sg.Text('Type flexibiliteit', size=size), sg.ButtonMenu('type', menu_def=type_flex, key='type_flex')],
-            #
-
-            #
-            # [sg.Text('Gebruiksvoorwaarden', background_color = 'darkblue')],
-            # [sg.Text('Start van flex', size =size), sg.OptionMenu(values=time_in_day, key='start_time')],
-            # [sg.Text('Eind van flex', size =size), sg.OptionMenu(values=time_in_day, key='end_time')],
-            # [sg.Text('Access link smartmeter', size =size), sg.Input(key='ICT_METER')],
-            # [sg.Text('Remarks', size =size), sg.Input(key='Remarks_gebruik')],
-            # [sg.Text('Extra', background_color = 'darkblue')],
-            # [sg.Text('Remarks', size =size), sg.Input(key='Remarks')]
            ]
 
 layout2 = [ [sg.Text('Informatie batterijen', background_color = 'darkblue')],
@@ -175,17 +152,13 @@ layout8 = [ [sg.Text('Overige apparaten', background_color = 'darkblue')],
             [sg.Text('Opmerkingen', size=size), sg.Input(key='Remarks_overig')],
             ]
 
-#['Batterij', 'EV laadpaal', 'Warmtepomp', 'Koelcel', 'AC', 'Warm water boiler', 'Overig']
 # ----------- Create actual layout using Columns and a row of Buttons
-
 layout = [[sg.Column(layout1, key='-COL1-'), sg.Column(layout2, visible=False, key='-COL2-'), sg.Column(layout3, visible=False, key='-COL3-'), sg.Column(layout4, visible=False, key='-COL4-'), sg.Column(layout5, visible=False, key='-COL5-'), sg.Column(layout6, visible=False, key='-COL6-'), sg.Column(layout7, visible=False, key='-COL7-'), sg.Column(layout8, visible=False, key='-COL8-')],
           [sg.Button('Submit'), sg.Button('Previous'), sg.Button('Exit')]]
 
-#, sg.Column(layout4, visible=False, key='-COL4-')
+window = sg.Window('Flex data input', layout)
 
-window = sg.Window('Flex data input', layout) # , margins=(500, 400)
-
-
+#Check if the keys match the current input and otherwise replace column names
 def retrive_data(events, value):
     global first
     if events == "Submit":
@@ -212,6 +185,7 @@ def retrive_data(events, value):
 
 
 layout = 1  # The currently visible layout
+#control the buttons
 while True:
     event, values = window.read()
     print(event)
@@ -247,9 +221,6 @@ while True:
             window[f'-COL{layout}-'].update(visible=False)
             layout = 8
             window[f'-COL{layout}-'].update(visible=True)
-    # if event == 'type_flex':
-    #     print(values['type_flex'])
-    #     type_flexibiliteit = values['type_flex']
     elif event in (None, 'Exit') or event == sg.WIN_CLOSED:
         break
     elif event == 'Previous':

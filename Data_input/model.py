@@ -9,8 +9,8 @@ class model:
         self.ZWC = ZWC
         self.onbalanskosten = onbalanskosten
         self.current_interval = current_interval
+        # Get the right data into the variables
         self.epex = self.allocation_trading['EPEX_EurMWh']
-        #self.temperature_forecast = self.data_grid['temperature_forecast']
         self.temperature_actual = temperature
         self.solar_forecast = self.ZWC['Forecast_solar']
         self.solar_actual = self.ZWC['Allocation_solar']
@@ -20,6 +20,7 @@ class model:
         self.consumption_actual = self.ZWC['Allocation_consumption']
         self.trading_volume = self.allocation_trading['Traded_Volume_MWh']
         self.totaal_allocatie = self.allocation_trading['Total_Allocation_MWh_both_tenants']
+        # Drop some of the onbalans columns
         columns_to_drop = ['datum', 'PTE', 'periode_van', 'periode_tm', 'indicatie noodvermogen op', 'indicatie noodvermogen af', 'prikkelcomponent']
         self.onbalanskosten = self.onbalanskosten.drop(columns=columns_to_drop)
         self.onbalanskosten = self.onbalanskosten.fillna(0)
@@ -42,22 +43,25 @@ class model:
         self.model.imbalance_opregelen = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.used_price = pyomo.Var(self.model.Time, within=pyomo.Any)
 
-
+        #onbalans volumes variables
         self.model.difference_MWh_afregelen = pyomo.Var(self.model.Time,bounds=(-100,100), within=pyomo.NonNegativeReals)
         self.model.difference_MWh_opregelen = pyomo.Var(self.model.Time,bounds=(-100,100), within=pyomo.NonNegativeReals)
         self.model.difference_MWh_plot = pyomo.Var(self.model.Time,bounds=(-100,100), within=pyomo.Reals)
         self.model.boolean_difference_afregelen = pyomo.Var(self.model.Time, within=pyomo.Binary)
         self.model.boolean_difference_opregelen = pyomo.Var(self.model.Time, within=pyomo.Binary)
 
+        #allocatie forecasts and actuals
         self.model.total_forecast = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_trading = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_hour_v_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_hour_e_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
 
+        # Select boolean to select the right imbalance price
         self.model.range_options_onbalans = pyomo.Set(initialize=range(self.onbalanskosten.shape[1]-1))
         self.model.boolean_select_imbalance = pyomo.Var(self.model.Time,self.model.range_options_onbalans, within=pyomo.Binary)
 
+        # Calculate predicted difference variables
         self.model.solar_difference = pyomo.Var(self.model.Time,bounds=(-100,100), within=pyomo.Reals)
         self.model.wind_difference = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
         self.model.relevant_difference = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
@@ -65,18 +69,12 @@ class model:
     def parameters(self, batterij, time_list_valid):
         self.batterij = batterij
         self.time_lists = pd.DataFrame.from_dict(time_list_valid)
-        #print(batterij)
 
+        # Get data from variables into a parameter
         self.epex_price_dict = {}
         for index, value in enumerate(self.epex):
             self.epex_price_dict[index] = value
         self.model.epex_price = pyomo.Param(self.model.Time, initialize=self.epex_price_dict)
-
-        # import the outside temperature
-        # self.temp_forecast_dict = {}
-        # for index, value in enumerate(self.temperature_forecast):
-        #     self.temp_forecast_dict[index] = value
-        # self.model.temp_forecast = pyomo.Param(self.model.Time, initialize=self.temp_forecast_dict)
 
         self.temp_actual_dict = {}
         for index, value in enumerate(self.temperature_actual):
@@ -132,11 +130,13 @@ class model:
         def imbalance_costs(model, i, j):
             return self.onbalanskosten.iloc[i, j]
 
+        #Get all the battery information into parameters
         self.model.range_options_batterij_metopwek = pyomo.Set(initialize=range(self.time_lists.shape[1]))
         self.model.range_options_info_shape_batterij_metopwek = pyomo.Set(initialize=range(self.batterij.shape[1]))
         self.model.time_valid_batterij_metopwek = pyomo.Param(self.model.range_options_batterij_metopwek, self.model.Time, mutable=True, initialize=time_list_batterij_metopwek, within=pyomo.Any)
         self.model.info_batterij_metopwek = pyomo.Param(self.model.range_options_info_shape_batterij_metopwek, self.model.range_options_batterij_metopwek, mutable=True, initialize=info_batterij_metopwek,within=pyomo.Any)
 
+        # Get the imbalance prices into parameters
         self.model.range_options_onbalanskosten = pyomo.Set(initialize=range(self.onbalanskosten.shape[1]))
         self.model.onbalanskosten = pyomo.Param(self.model.Time,self.model.range_options_onbalanskosten, mutable=True, initialize=imbalance_costs, within=pyomo.Any)
         self.model.regeltoestand_options = pyomo.Param(self.model.Time, self.model.range_options_onbalans, mutable=True, initialize={(t,x): self.regeltoestanden[x] for t in self.model.Time for x in self.model.range_options_onbalans}, within=pyomo.Integers)
@@ -148,10 +148,6 @@ class model:
         def total_assumed(model,t):
             return model.total_forecast[t] == model.solar_forecast[t] + model.wind_forecast[t] + model.consumption_forecast[t]
         self.model.total_assumed = pyomo.Constraint(self.model.Time, rule=total_assumed)
-
-        # def total_with_trading(model,t):
-        #     return model.total_forecast_trading[t] == model.total_forecast[t] + model.trading_volume[t]
-        # self.model.total_with_trading = pyomo.Constraint(self.model.Time, rule=total_with_trading)
 
         def total_assumed_hour_V(model,t):
             if t % 4 == 0:

@@ -1,9 +1,8 @@
 import pandas as pd
-from keys_creation import keys
 
-class data_retrieval:
+class data_retrieval_appliances:
     def __init__(self):
-        keys_order = keys()
+        #create dicts to store information from appliances per type of appliance
         self.batterij_unique = {}
         self.EV_unique = {}
         self.AC_unique = {}
@@ -12,22 +11,39 @@ class data_retrieval:
         self.WP_no_buffer_unique = {}
         self. WWB_unique = {}
         self.overig_unique = {}
+        #read data from flex input
         self.data = pd.read_csv("data/data2.csv")
+        #get unique types of flex {curtailable, shiftable(advance, delay, both), mobile storage etc.}
         self.unique_type_flex = self.data['type_flex_main'].unique()
-        self.main_keys, self.bat_keys, self.EV_keys, self.AC_keys, self.KC_keys, self.WP_keys_buf, self.WP_keys_no_buf, self.WWB_keys, self.overig_keys = keys_order.keys_creation(data=self.data)
-        #print(unique_type_flex)
+        #retrieve the keys per question from flex input
+        self.main_keys, self.bat_keys, self.EV_keys, self.AC_keys, self.KC_keys, self.WP_keys_buf, self.WP_keys_no_buf, self.WWB_keys, self.overig_keys = self.keys_creation(data=self.data)
 
     def return_unique(self):
+        #Function to easily call all the unique types
         return self.unique_type_flex
 
+    def keys_creation(self, data):
+        self.column_names = data.columns.tolist()
+        #from the columns of the data divide the keys per type of appliance and return them
+        self.main_keys = [names for names in self.column_names if 'main' in names]
+        self.bat_keys = [names for names in self.column_names if 'bat' in names]
+        self.EV_keys = [names for names in self.column_names if 'ev' in names]
+        self.AC_keys = [names for names in self.column_names if 'ac' in names]
+        self.KC_keys = [names for names in self.column_names if 'kc' in names]
+        self.WP_keys_no_buf = [names for names in self.column_names if 'wp' in names]
+        self.WP_keys_buf = [names for names in self.column_names if 'buf' in names]
+        self.WP_keys_buf =  self.WP_keys_no_buf + self.WP_keys_buf
+        self.WWB_keys = [names for names in self.column_names if 'wwb' in names]
+        self.overig_keys = [names for names in self.column_names if 'overig' in names]
+        return self.main_keys, self.bat_keys, self.EV_keys,self.AC_keys, self.KC_keys, self.WP_keys_buf, self.WP_keys_no_buf, self.WWB_keys, self.overig_keys
 
+
+    #per type of appliance filter out non relevant information so the size of the df is decreased and logical
     def batterij(self):
         batterij = self.data[self.data['type_appl_main'] == 'Batterij']
         batterij = batterij.loc[:, self.main_keys + self.bat_keys]
         for type in self.unique_type_flex:
             self.batterij_unique[type] = batterij[batterij['type_flex_main'] == type]
-        #     print(self.batterij_unique[type].to_string())
-        # print(batterij.to_string())
         return self.batterij_unique
 
     def EVlaadpaal(self):
@@ -92,4 +108,5 @@ class data_retrieval:
         return self.overig_unique
 
     def get_all(self):
+        #activate all the type of appliances and there relevant information
         return self.batterij(), self.EVlaadpaal(), self.AC(), self.KC(), self.WP_buf(), self.WP_no_buf(), self.WWB(), self.overig()

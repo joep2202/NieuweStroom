@@ -11,6 +11,7 @@ class optimizer:
         self.horizon = 96
         self.model = pyomo.ConcreteModel()
         self.current_interval = current_interval
+        #initialize model
         self.model_imbalance = model(self.model, allocation_trading=allocation_trading, onbalanskosten=onbalanskosten , ZWC=ZWC, temperature=temperature, current_interval=self.current_interval)
         self.model.horizon = self.horizon
         self.model.Time = pyomo.RangeSet(0, self.model.horizon - 1)
@@ -27,15 +28,11 @@ class optimizer:
         self.model_imbalance.run_model(batterij=batterij, time_list_valid=time_list_valid)
         # initiate Gurobi and load results
         self.model.total_imbalance = pyomo.Objective(rule=self.ObjectiveFunction, sense=pyomo.minimize)
-        #self.model.pprint()
         opt = SolverFactory('gurobi', model=self.model)
         opt.options['timelimit'] = self.solver_time_limit
         opt.options['NonConvex'] = 2
         print("send to solver")
         result = opt.solve(self.model)
-
-
-        #print(model.select_heating_option_buffer.extract_values())
 
         # catch if results are correctly solved or not
         if (result.solver.status == SolverStatus.ok) and (result.solver.termination_condition == TerminationCondition.optimal):
@@ -49,7 +46,7 @@ class optimizer:
             print('3', result)
             print('Solver Status:', result.solver.status)
 
-        #temp_forecast = pd.Series(self.model.temp_forecast.extract_values(), name=self.model.temp_forecast.name)
+        #Turn model results to Pandas series to be able to plot them
         temp_actual = pd.Series(self.model.temp_actual.extract_values(), name=self.model.temp_actual.name)
         solar_forecast = pd.Series(self.model.solar_forecast.extract_values(), name=self.model.solar_forecast.name)
         solar_actual = pd.Series(self.model.solar_actual.extract_values(), name=self.model.solar_actual.name)
@@ -60,7 +57,6 @@ class optimizer:
         total_forecast = pd.Series(self.model.total_forecast.extract_values(), name=self.model.total_forecast.name)
         total_forecast_hour_v_programma = pd.Series(self.model.total_forecast_hour_v_programma.extract_values(), name=self.model.total_forecast_hour_v_programma.name)
         total_forecast_hour_e_programma = pd.Series(self.model.total_forecast_hour_e_programma.extract_values(),name=self.model.total_forecast_hour_e_programma.name)
-        #total_forecast_trading = pd.Series(self.model.total_forecast_trading.extract_values(),name=self.model.total_forecast_trading.name)
         totaal_allocatie = pd.Series(self.model.totaal_allocatie.extract_values(), name=self.model.totaal_allocatie.name)
         difference_MWh_plot = pd.Series(self.model.difference_MWh_plot.extract_values(),name=self.model.difference_MWh_plot.name)
         imbalance_before_flex = pd.Series(self.model.imbalance_costs_before_flex.extract_values(), name=self.model.imbalance_costs_before_flex.name)
@@ -75,7 +71,7 @@ class optimizer:
         wind_difference = pd.Series(self.model.wind_difference.extract_values(), name=self.model.wind_difference.name)
         relevant_difference = pd.Series(self.model.relevant_difference.extract_values(),name=self.model.relevant_difference.name)
 
-
+        #print some of the results to be able to analyse them in depth
         print('difference af', self.model.difference_MWh_afregelen.extract_values())
         print('difference op', self.model.difference_MWh_opregelen.extract_values())
         #print('difference', self.model.difference_MWh.extract_values())
@@ -86,21 +82,18 @@ class optimizer:
         print('imbalance', self.model.imbalance_costs_before_flex.extract_values())
         print('imbalance epex', self.model.imbalance_costs_before_flex_epex.extract_values())
 
-        # df = pd.concat([imbalance_before_flex,self.onbalanskosten_check['ImbalanceTennetCosts'], imbalance_costs_before_flex_epex, self.onbalanskosten_check['ImbalanceCosts'], difference_MWh_opregelen, difference_MWh_afregelen, used_price,epex_price, used_price*difference_MWh_opregelen, epex_price-used_price,(used_price-epex_price)*difference_MWh_plot], axis=1)
-        #
-        # # Display the DataFrame
-        # print(df.to_string())
 
         # X TICK LABELS
         x = np.arange(0, 96, 8)
         x = np.append(x, 96)
         x_ticks_labels = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00','20:00', '22:00', '00:00']
-        # #x_ticks_labels = x_ticks_labels[int(current_interval / 8):]
+        x_ticks_labels = x_ticks_labels[int(self.current_interval / 8):]
+
+        #plot necessary results
         fig, ax = plt.subplots(6,1, figsize=(15,12))
         fig, axes = plt.subplots(2, 1, figsize=(15, 12))
         fig, ax2 = plt.subplots(2, 1, figsize=(15, 12))
 
-        #ax[0].plot(temp_forecast[self.current_interval:], label='Temperature forecast', color='m')
         ax[0].plot(temp_actual[self.current_interval:], label='Temperature actual', color='g')
         ax[0].set(xlabel='time (h)', ylabel='Temp [C]')
         ax[0].set_xticks(x)
@@ -158,8 +151,8 @@ class optimizer:
         ax[5].legend()
 
         axes[0].plot(total_forecast[self.current_interval:], label='Total forecast', color='m')
-        axes[0].plot(total_forecast_hour_e_programma[self.current_interval:], label='Total forecast hour with trading', color='r')
-        axes[0].plot(total_forecast_hour_v_programma[self.current_interval:], label='Total forecast hour with trading', color='b')
+        axes[0].plot(total_forecast_hour_e_programma[self.current_interval:], label='Total forecast hour with trading E', color='r')
+        axes[0].plot(total_forecast_hour_v_programma[self.current_interval:], label='Total forecast hour with trading V', color='b')
         #axes[0].plot(total_forecast_trading, label='Total forecast after trading', color='r')
         axes[0].plot(totaal_allocatie[self.current_interval:], label='Total allocatie', color='g')
         axes[0].plot(trading_volume[self.current_interval:], label='Trading volume', color='y')
