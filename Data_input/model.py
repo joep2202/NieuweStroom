@@ -2,23 +2,24 @@ import pandas as pd
 import pyomo.environ as pyomo
 
 class model:
-    def __init__(self, model, data_grid, onbalanskosten, current_interval):
+    def __init__(self, model, allocation_trading, onbalanskosten, ZWC, temperature, current_interval):
         self.model = model
         self.time_lists_param = {}
-        self.data_grid = data_grid
+        self.allocation_trading = allocation_trading
+        self.ZWC = ZWC
         self.onbalanskosten = onbalanskosten
         self.current_interval = current_interval
-        self.epex = self.data_grid['EPEX']
-        self.temperature_forecast = self.data_grid['temperature_forecast']
-        self.temperature_actual = self.data_grid['temperature_actual']
-        self.solar_forecast = self.data_grid['solar_forecast']
-        self.solar_actual = self.data_grid['solar_actual']
-        self.wind_forecast = self.data_grid['wind_forecast']
-        self.wind_actual = self.data_grid['wind_actual']
-        self.consumption_forecast = self.data_grid['consumption_forecast']
-        self.consumption_actual = self.data_grid['consumption_actual']
-        self.trading_volume = self.data_grid['Trading_Volume']
-        self.totaal_allocatie = self.data_grid['Allocatie_volume']
+        self.epex = self.allocation_trading['EPEX_EurMWh']
+        #self.temperature_forecast = self.data_grid['temperature_forecast']
+        self.temperature_actual = temperature
+        self.solar_forecast = self.ZWC['Forecast_solar']
+        self.solar_actual = self.ZWC['Allocation_solar']
+        self.wind_forecast = self.ZWC['Forecast_wind']
+        self.wind_actual = self.ZWC['Allocation_wind']
+        self.consumption_forecast = self.ZWC['Forecast_consumption']
+        self.consumption_actual = self.ZWC['Allocation_consumption']
+        self.trading_volume = self.allocation_trading['Traded_Volume_MWh']
+        self.totaal_allocatie = self.allocation_trading['Total_Allocation_MWh_both_tenants']
         columns_to_drop = ['datum', 'PTE', 'periode_van', 'periode_tm', 'indicatie noodvermogen op', 'indicatie noodvermogen af', 'prikkelcomponent']
         self.onbalanskosten = self.onbalanskosten.drop(columns=columns_to_drop)
         self.onbalanskosten = self.onbalanskosten.fillna(0)
@@ -72,10 +73,10 @@ class model:
         self.model.epex_price = pyomo.Param(self.model.Time, initialize=self.epex_price_dict)
 
         # import the outside temperature
-        self.temp_forecast_dict = {}
-        for index, value in enumerate(self.temperature_forecast):
-            self.temp_forecast_dict[index] = value
-        self.model.temp_forecast = pyomo.Param(self.model.Time, initialize=self.temp_forecast_dict)
+        # self.temp_forecast_dict = {}
+        # for index, value in enumerate(self.temperature_forecast):
+        #     self.temp_forecast_dict[index] = value
+        # self.model.temp_forecast = pyomo.Param(self.model.Time, initialize=self.temp_forecast_dict)
 
         self.temp_actual_dict = {}
         for index, value in enumerate(self.temperature_actual):

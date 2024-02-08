@@ -7,11 +7,11 @@ from model import model
 
 
 class optimizer:
-    def __init__(self, data_grid, onbalanskosten, current_interval):
+    def __init__(self, allocation_trading, onbalanskosten, ZWC, temperature,  current_interval):
         self.horizon = 96
         self.model = pyomo.ConcreteModel()
         self.current_interval = current_interval
-        self.model_imbalance = model(self.model, data_grid=data_grid, onbalanskosten=onbalanskosten , current_interval=self.current_interval)
+        self.model_imbalance = model(self.model, allocation_trading=allocation_trading, onbalanskosten=onbalanskosten , ZWC=ZWC, temperature=temperature, current_interval=self.current_interval)
         self.model.horizon = self.horizon
         self.model.Time = pyomo.RangeSet(0, self.model.horizon - 1)
         self.solver_time_limit = 60
@@ -49,7 +49,7 @@ class optimizer:
             print('3', result)
             print('Solver Status:', result.solver.status)
 
-        temp_forecast = pd.Series(self.model.temp_forecast.extract_values(), name=self.model.temp_forecast.name)
+        #temp_forecast = pd.Series(self.model.temp_forecast.extract_values(), name=self.model.temp_forecast.name)
         temp_actual = pd.Series(self.model.temp_actual.extract_values(), name=self.model.temp_actual.name)
         solar_forecast = pd.Series(self.model.solar_forecast.extract_values(), name=self.model.solar_forecast.name)
         solar_actual = pd.Series(self.model.solar_actual.extract_values(), name=self.model.solar_actual.name)
@@ -100,7 +100,7 @@ class optimizer:
         fig, axes = plt.subplots(2, 1, figsize=(15, 12))
         fig, ax2 = plt.subplots(2, 1, figsize=(15, 12))
 
-        ax[0].plot(temp_forecast[self.current_interval:], label='Temperature forecast', color='m')
+        #ax[0].plot(temp_forecast[self.current_interval:], label='Temperature forecast', color='m')
         ax[0].plot(temp_actual[self.current_interval:], label='Temperature actual', color='g')
         ax[0].set(xlabel='time (h)', ylabel='Temp [C]')
         ax[0].set_xticks(x)

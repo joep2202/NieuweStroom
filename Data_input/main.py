@@ -3,25 +3,24 @@ from keys_creation import keys
 from imbalance_optimzer import optimizer
 import pandas as pd
 from TempDataRetrieval import retrieve_temp
+from Data_retrieval_Tennet_situation import import_data_per_day
+from datetime import datetime
 
-day_one = True
+timestamp= 20231220
+
+date_temp = datetime.strptime(str(timestamp), '%Y%m%d')
+date = date_temp.strftime('%d/%m/%Y')
 current_interval = 0
-temperature_call = retrieve_temp(timestamp=20231210)
-
-if day_one:
-    data_grid = pd.read_csv('data/ExtData_10-12-23.csv', index_col=0)
-    onbalanskosten = pd.read_csv('data/onbalanskosten_10_12_23.csv')
-elif not day_one:
-    data_grid = pd.read_csv('data/ExtData_28-11-23.csv', index_col=0)
-    onbalanskosten = pd.read_csv('data/onbalanskosten_28_11_23.csv')
+temperature_call = retrieve_temp(timestamp=timestamp)
+import_data = import_data_per_day()
 
 
+allocation_trading, onbalanskosten, ZWC = import_data.get_data(date)
 temperature = temperature_call.change_into_15min()
-print(temperature.to_string())
 
 data_retr = data_retrieval()
 keys = keys()
-optimizer_imbalance = optimizer(data_grid=data_grid, onbalanskosten=onbalanskosten, current_interval=current_interval)
+optimizer_imbalance = optimizer(allocation_trading=allocation_trading, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], current_interval=current_interval)
 
 appl = ['batterij', 'EVlaadpaal', 'AC', 'KC', 'WP_buf', 'WP_no_buf', 'WWB', 'overig']
 main_keys = ['appl_id_main','PiekAansluiting_main', 'type_flex_main']
