@@ -1,9 +1,11 @@
 import pandas as pd
 import pyomo.environ as pyomo
+from retrieve_SOC_battery import retrieve_SOC
 
 class model:
     def __init__(self, model, allocation_trading, onbalanskosten, ZWC, temperature, current_interval):
         self.model = model
+        self.retrieve_SOC_battery = retrieve_SOC()
         self.time_lists_param = {}
         self.allocation_trading = allocation_trading
         self.ZWC = ZWC
@@ -29,11 +31,11 @@ class model:
 
 
     def run_model(self, batterij, time_list_valid):
-        self.variable()
+        self.variable(batterij=batterij)
         self.parameters(batterij, time_list_valid)
         self.constraints()
 
-    def variable(self):
+    def variable(self, batterij):
         #Imbalance costs variables
         self.model.imbalance_costs_before_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_costs_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
@@ -44,6 +46,8 @@ class model:
         self.model.imbalance_costs_before_flex_epex_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_afregelen = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_opregelen = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.onvermijdbaar_imbalance = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.onvermijdbaar_imbalance_totaal = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.used_price = pyomo.Var(self.model.Time, within=pyomo.Any)
 
         #onbalans volumes variables
@@ -57,6 +61,11 @@ class model:
         self.model.difference_MWh_plot_comp = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
         self.model.boolean_difference_afregelen_comp = pyomo.Var(self.model.Time, within=pyomo.Binary)
         self.model.boolean_difference_opregelen_comp = pyomo.Var(self.model.Time, within=pyomo.Binary)
+        self.model.difference_MWh_afregelen_onvermijdbaar = pyomo.Var(self.model.Time, bounds=(-100, 100),within=pyomo.NonNegativeReals)
+        self.model.difference_MWh_opregelen_onvermijdbaar = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.NonNegativeReals)
+        self.model.difference_MWh_plot_onvermijdbaar = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
+        self.model.boolean_difference_afregelen_onvermijdbaar = pyomo.Var(self.model.Time, within=pyomo.Binary)
+        self.model.boolean_difference_opregelen_onvermijdbaar = pyomo.Var(self.model.Time, within=pyomo.Binary)
 
         #allocatie forecasts and actuals
         self.model.total_forecast = pyomo.Var(self.model.Time, within=pyomo.Any)
@@ -66,6 +75,7 @@ class model:
         self.model.total_forecast_hour_v_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_hour_v_programma_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_hour_e_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.total_allocation_hour = pyomo.Var(self.model.Time, within=pyomo.Any)
 
         # Select boolean to select the right imbalance price
         self.model.range_options_onbalans = pyomo.Set(initialize=range(self.onbalanskosten.shape[1]-1))
@@ -76,9 +86,20 @@ class model:
         self.model.wind_difference = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
         self.model.relevant_difference = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
 
+        # Battery variables
+        self.model.number_batteries = pyomo.Set(initialize=range(len(batterij)))
+        self.model.batterij_SOC = pyomo.Var(self.model.Time,self.model.number_batteries, within=pyomo.Any)
+        self.model.batterij_activation_boolean_charge = pyomo.Var(self.model.Time,self.model.number_batteries, within=pyomo.Binary)
+        self.model.batterij_activation_boolean_discharge = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.Binary)
+        self.model.batterij_energyNotServed = pyomo.Var(self.model.Time, self.model.number_batteries)
+        self.model.batterij_energyNotServedFactor = pyomo.Var(self.model.Time, self.model.number_batteries)
+
     def parameters(self, batterij, time_list_valid):
         self.batterij = batterij
+        self.batterij = self.retrieve_SOC_battery.get_SOC_battery(batterij)
         self.time_lists = pd.DataFrame.from_dict(time_list_valid)
+        #print(self.batterij.to_string())
+        #print(self.time_lists.to_string())
 
         # Get data from variables into a parameter
         self.epex_price_dict = {}
@@ -203,11 +224,11 @@ class model:
 
         # Calculate the imbalance cost per 15 minutes and in total
         def imbalance_cost(model,t):
-            return model.imbalance_costs_before_flex[t] == (model.onbalanskosten[t,0]*model.boolean_select_imbalance[t,0]*-model.difference_MWh_plot[t])+(model.onbalanskosten[t,1]*model.boolean_select_imbalance[t,1]*-model.difference_MWh_plot[t])+(((model.onbalanskosten[t,0]*model.difference_MWh_opregelen[t])+(model.onbalanskosten[t,1]*-model.difference_MWh_afregelen[t]))*model.boolean_select_imbalance[t,3])+(model.onbalanskosten[t,3]*model.boolean_select_imbalance[t,2]*-model.difference_MWh_plot[t])#+(model.onbalanskosten[t,3]*model.boolean_select_imbalance[t,2]*((model.difference_MWh_afregelen[t]* model.boolean_difference_afregelen[t])+(model.difference_MWh_opregelen[t]* model.boolean_difference_opregelen[t])))
+            return model.imbalance_costs_before_flex[t] == (model.used_price[t]*-model.difference_MWh_plot[t])
         self.model.imbalance_cost = pyomo.Constraint(self.model.Time, rule=imbalance_cost)
 
         def imbalance_cost_epex(model,t):
-            return model.imbalance_costs_before_flex_epex[t] == ((model.epex_price[t]-model.onbalanskosten[t,0])*model.boolean_select_imbalance[t,0]*(model.difference_MWh_plot[t])) +((model.epex_price[t]-model.onbalanskosten[t,1])*model.boolean_select_imbalance[t,1]*(model.difference_MWh_plot[t]))+((model.epex_price[t]-model.onbalanskosten[t,3])*model.boolean_select_imbalance[t,2]*(model.difference_MWh_plot[t]))+((((model.epex_price[t]-model.onbalanskosten[t,0])*-model.difference_MWh_opregelen[t])+((model.epex_price[t]-model.onbalanskosten[t,1])*model.difference_MWh_afregelen[t]))*model.boolean_select_imbalance[t,3])
+            return model.imbalance_costs_before_flex_epex[t] == ((model.epex_price[t]-model.used_price[t])*model.difference_MWh_plot[t])
         self.model.imbalance_cost_epex = pyomo.Constraint(self.model.Time, rule=imbalance_cost_epex)
 
         def imbalance_costs_total(model,t):
@@ -239,6 +260,29 @@ class model:
         def relevant_dif(model,t):
             return model.relevant_difference[t] ==  model.wind_difference[t] + model.solar_difference[t]
         self.model.relevant_dif = pyomo.Constraint(self.model.Time, rule=relevant_dif)
+
+        def battery_SOC(model, t, x):
+            if t == 0:
+                return model.batterij_SOC[t,x] == model.info_batterij_metopwek[9,x] * model.info_batterij_metopwek[4,x]
+            elif t == self.current_interval:
+                return model.batterij_SOC[t,x] == model.info_batterij_metopwek[9,x] * model.info_batterij_metopwek[4,x]
+            else:
+                return model.batterij_SOC[t,x] == model.batterij_SOC[t-1,x] + (model.info_batterij_metopwek[4,x]* model.time_valid_batterij_metopwek[x,t]) * (model.batterij_activation_boolean_charge[t,x]+(-model.batterij_activation_boolean_discharge[t,x]))
+        self.model.battery_SOC = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC)
+
+        def battery_SOC_boolean(model, t, x):
+            return model.batterij_activation_boolean_charge[t,x]+model.batterij_activation_boolean_discharge[t,x] <= 1
+        self.model.battery_SOC_boolean = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_boolean)
+
+        ##Dit werkt nog niet, want absoluut werkt hier niet, kijken hoe ik dit aanpak
+        # def battery_SOC_notservedfactor(model, t, x):
+        #     return model.battery_SOC_notservedfactor[t,x] == model.batterij_SOC[t,x]-(model.info_batterij_metopwek[4,x]*model.info_batterij_metopwek[5,x])
+        # self.model.battery_SOC_notservedfactor = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_notservedfactor)
+
+        ##### ANALYSIS PART THIS PART ANALYSES WHAT THE ONVERMIJDBAAR IMBALANCE IS AND WHAT HAPPENS IF WE COMPENSATE BASED ON WEATHER DATA
+        ##### ASSUMING THAT THE FORECAST IS VERY CLOSE TO THE ACTUALS
+
+        ##### WEATHER COMPENSATION CALCULATION
 
         def allocatie_adapted(model,t):
             return model.total_forecast_trading_adapted[t] == model.total_forecast[t] + model.relevant_difference[t]
@@ -293,6 +337,48 @@ class model:
             else:
                 return model.imbalance_costs_before_flex_total_comp[t] == model.imbalance_costs_before_flex_total_comp[t - 1] + model.imbalance_costs_before_flex_epex_comp[t]
         self.model.imbalance_costs_total_comp = pyomo.Constraint(self.model.Time, rule=imbalance_costs_total_comp)
+
+        ##### ONVERMIJDBAAR ONBALANS CALCULATION
+
+        def total_assumed_hour_allocatie(model,t):
+            if t % 4 == 0:
+                self.total_hour_variable = t
+            return model.total_allocation_hour[t] == ((model.totaal_allocatie[0+self.total_hour_variable] + model.totaal_allocatie[1+self.total_hour_variable] + model.totaal_allocatie[2+self.total_hour_variable] + model.totaal_allocatie[3+self.total_hour_variable])/4)
+        self.model.total_assumed_hour_allocatie = pyomo.Constraint(self.model.Time, rule=total_assumed_hour_allocatie)
+
+        # Calculate the difference between forecasted total and actual total done seperately to be able to calculate imbalance cost.
+        def difference_in_MWh_afregelen_onvermijdbaar(model, t):
+            return model.difference_MWh_afregelen_onvermijdbaar[t] == (model.total_allocation_hour[t] - model.totaal_allocatie[t]) * model.boolean_difference_afregelen_onvermijdbaar[t]
+        self.model.difference_in_MWh_afregelen_onvermijdbaar = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_afregelen_onvermijdbaar)
+
+        def difference_in_MWh_opregelen_onvermijdbaar(model, t):
+            return model.difference_MWh_opregelen_onvermijdbaar[t] == (model.totaal_allocatie[t] - model.total_allocation_hour[t]) * model.boolean_difference_opregelen_onvermijdbaar[t]
+        self.model.difference_in_MWh_opregelen_onvermijdbaar = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_opregelen_onvermijdbaar)
+
+        def difference_in_MWh_boolean_onvermijdbaar(model, t):
+            return model.boolean_difference_afregelen_onvermijdbaar[t] + model.boolean_difference_opregelen_onvermijdbaar[t] == 1
+        self.model.difference_in_MWh_boolean_onvermijdbaar = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_boolean_onvermijdbaar)
+
+        def difference_in_MWh_plot_onvermijdbaar(model, t):
+            return model.difference_MWh_plot_onvermijdbaar[t] == model.total_allocation_hour[t] - model.totaal_allocatie[t]
+        self.model.difference_in_MWh_plot_onvermijdbaar = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_plot_onvermijdbaar)
+
+        def imbalance_cost_epex_onvermijdbaar(model, t):
+            return model.onvermijdbaar_imbalance[t] == ((model.epex_price[t] - model.onbalanskosten[t, 0]) * model.boolean_select_imbalance[t, 0] * (model.difference_MWh_plot_onvermijdbaar[t])) + \
+                   ((model.epex_price[t] - model.onbalanskosten[t, 1]) * model.boolean_select_imbalance[t, 1] * (model.difference_MWh_plot_onvermijdbaar[t])) + \
+                   ((model.epex_price[t] - model.onbalanskosten[t, 3]) * model.boolean_select_imbalance[t, 2] * (model.difference_MWh_plot_onvermijdbaar[t])) + \
+                   ((((model.epex_price[t] - model.onbalanskosten[t, 0]) * -model.difference_MWh_opregelen_onvermijdbaar[t]) +
+                     ((model.epex_price[t] - model.onbalanskosten[t, 1]) *model.difference_MWh_afregelen_onvermijdbaar[t])) * model.boolean_select_imbalance[t, 3])
+        self.model.imbalance_cost_epex_onvermijdbaar = pyomo.Constraint(self.model.Time, rule=imbalance_cost_epex_onvermijdbaar)
+
+        def imbalance_costs_total_onvermijdbaar(model, t):
+            if t == 0:
+                return model.onvermijdbaar_imbalance_totaal[t] == model.onvermijdbaar_imbalance[t]
+            elif t == self.current_interval:
+                return model.onvermijdbaar_imbalance_totaal[t] == model.onvermijdbaar_imbalance[t]
+            else:
+                return model.onvermijdbaar_imbalance_totaal[t] == model.onvermijdbaar_imbalance_totaal[t - 1] + model.onvermijdbaar_imbalance[t]
+        self.model.imbalance_costs_total_onvermijdbaar = pyomo.Constraint(self.model.Time, rule=imbalance_costs_total_onvermijdbaar)
 
 
 
