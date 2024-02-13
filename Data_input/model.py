@@ -39,6 +39,9 @@ class model:
         self.model.imbalance_costs_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_costs_before_flex_total = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_costs_before_flex_epex = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.imbalance_costs_before_flex_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.imbalance_costs_before_flex_total_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.imbalance_costs_before_flex_epex_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_afregelen = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_opregelen = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.used_price = pyomo.Var(self.model.Time, within=pyomo.Any)
@@ -49,12 +52,19 @@ class model:
         self.model.difference_MWh_plot = pyomo.Var(self.model.Time,bounds=(-100,100), within=pyomo.Reals)
         self.model.boolean_difference_afregelen = pyomo.Var(self.model.Time, within=pyomo.Binary)
         self.model.boolean_difference_opregelen = pyomo.Var(self.model.Time, within=pyomo.Binary)
+        self.model.difference_MWh_afregelen_comp = pyomo.Var(self.model.Time, bounds=(-100, 100),within=pyomo.NonNegativeReals)
+        self.model.difference_MWh_opregelen_comp = pyomo.Var(self.model.Time, bounds=(-100, 100),within=pyomo.NonNegativeReals)
+        self.model.difference_MWh_plot_comp = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
+        self.model.boolean_difference_afregelen_comp = pyomo.Var(self.model.Time, within=pyomo.Binary)
+        self.model.boolean_difference_opregelen_comp = pyomo.Var(self.model.Time, within=pyomo.Binary)
 
         #allocatie forecasts and actuals
         self.model.total_forecast = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_trading = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.total_forecast_trading_adapted = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_hour_v_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.total_forecast_hour_v_programma_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_hour_e_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
 
         # Select boolean to select the right imbalance price
@@ -230,7 +240,59 @@ class model:
             return model.relevant_difference[t] ==  model.wind_difference[t] + model.solar_difference[t]
         self.model.relevant_dif = pyomo.Constraint(self.model.Time, rule=relevant_dif)
 
+        def allocatie_adapted(model,t):
+            return model.total_forecast_trading_adapted[t] == model.total_forecast[t] + model.relevant_difference[t]
+        self.model.allocatie_adapted = pyomo.Constraint(self.model.Time, rule=allocatie_adapted)
 
+        def total_assumed_hour_V_compensated(model,t):
+            if t % 4 == 0:
+                self.total_hour_variable = t
+            return model.total_forecast_hour_v_programma_comp[t] == ((model.total_forecast_trading_adapted[0+self.total_hour_variable] + model.total_forecast_trading_adapted[1+self.total_hour_variable] + model.total_forecast_trading_adapted[2+self.total_hour_variable] + model.total_forecast_trading_adapted[3+self.total_hour_variable])/4) + model.trading_volume[t]
+        self.model.total_assumed_hour_V_compensated = pyomo.Constraint(self.model.Time, rule=total_assumed_hour_V_compensated)
+
+        # Calculate the difference between forecasted total and actual total done seperately to be able to calculate imbalance cost.
+        def difference_in_MWh_afregelen_comp(model, t):
+            return model.difference_MWh_afregelen_comp[t] == (model.total_forecast_hour_v_programma_comp[t] - model.totaal_allocatie[t]) * model.boolean_difference_afregelen_comp[t]
+        self.model.difference_in_MWh_afregelen_comp = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_afregelen_comp)
+
+        def difference_in_MWh_opregelen_comp(model, t):
+            return model.difference_MWh_opregelen_comp[t] == (model.totaal_allocatie[t] - model.total_forecast_hour_v_programma_comp[t]) * model.boolean_difference_opregelen_comp[t]
+        self.model.difference_in_MWh_opregelen_comp = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_opregelen_comp)
+
+        def difference_in_MWh_boolean_comp(model, t):
+            return model.boolean_difference_afregelen_comp[t] + model.boolean_difference_opregelen_comp[t] == 1
+        self.model.difference_in_MWh_boolean_comp = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_boolean_comp)
+
+        def difference_in_MWh_plot_comp(model, t):
+            return model.difference_MWh_plot_comp[t] == model.total_forecast_hour_v_programma_comp[t] - model.totaal_allocatie[t]
+        self.model.difference_in_MWh_plot_comp = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_plot_comp)
+
+        # Calculate the imbalance cost per 15 minutes and in total
+        def imbalance_cost_comp(model, t):
+            return model.imbalance_costs_before_flex_comp[t] == (model.onbalanskosten[t, 0] * model.boolean_select_imbalance[t, 0] * -model.difference_MWh_plot_comp[t]) + \
+                   (model.onbalanskosten[t, 1] * model.boolean_select_imbalance[t, 1] * - model.difference_MWh_plot_comp[t]) + \
+                   (((model.onbalanskosten[t, 0] * model.difference_MWh_opregelen_comp[t]) +
+                     (model.onbalanskosten[t, 1] * -model.difference_MWh_afregelen_comp[t])) * model.boolean_select_imbalance[t, 3]) + \
+                   (model.onbalanskosten[t, 3] * model.boolean_select_imbalance[t, 2] * - model.difference_MWh_plot_comp[t])
+                    # +(model.onbalanskosten[t,3]*model.boolean_select_imbalance[t,2]*((model.difference_MWh_afregelen[t]* model.boolean_difference_afregelen[t])+(model.difference_MWh_opregelen[t]* model.boolean_difference_opregelen[t])))
+        self.model.imbalance_cost_comp = pyomo.Constraint(self.model.Time, rule=imbalance_cost_comp)
+
+        def imbalance_cost_epex_comp(model, t):
+            return model.imbalance_costs_before_flex_epex_comp[t] == ((model.epex_price[t] - model.onbalanskosten[t, 0]) * model.boolean_select_imbalance[t, 0] * (model.difference_MWh_plot_comp[t])) + \
+                   ((model.epex_price[t] - model.onbalanskosten[t, 1]) * model.boolean_select_imbalance[t, 1] * (model.difference_MWh_plot_comp[t])) + \
+                   ((model.epex_price[t] - model.onbalanskosten[t, 3]) * model.boolean_select_imbalance[t, 2] * (model.difference_MWh_plot_comp[t])) + \
+                   ((((model.epex_price[t] - model.onbalanskosten[t, 0]) * -model.difference_MWh_opregelen_comp[t]) +
+                     ((model.epex_price[t] - model.onbalanskosten[t, 1]) *model.difference_MWh_afregelen_comp[t])) * model.boolean_select_imbalance[t, 3])
+        self.model.imbalance_cost_epex_comp = pyomo.Constraint(self.model.Time, rule=imbalance_cost_epex_comp)
+
+        def imbalance_costs_total_comp(model, t):
+            if t == 0:
+                return model.imbalance_costs_before_flex_total_comp[t] == model.imbalance_costs_before_flex_epex_comp[t]
+            elif t == self.current_interval:
+                return model.imbalance_costs_before_flex_total_comp[t] == model.imbalance_costs_before_flex_epex_comp[t]
+            else:
+                return model.imbalance_costs_before_flex_total_comp[t] == model.imbalance_costs_before_flex_total_comp[t - 1] + model.imbalance_costs_before_flex_epex_comp[t]
+        self.model.imbalance_costs_total_comp = pyomo.Constraint(self.model.Time, rule=imbalance_costs_total_comp)
 
 
 

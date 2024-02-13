@@ -8,7 +8,7 @@ from Data_retrieval_Tennet_situation import import_data_per_day
 #import libraries
 from datetime import datetime
 
-timestamp= 20231220                                     #select the data for which the code runs
+timestamp= 20231220                                   #select the data for which the code runs
 current_interval = 0                                    #select interval from which the code runs
 
 #change dates to usable format
