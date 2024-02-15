@@ -3,7 +3,10 @@ import pandas as pd
 class data_retrieval_appliances:
     def __init__(self):
         #create dicts to store information from appliances per type of appliance
+        pd.options.mode.chained_assignment = None  # default='warn'
         self.batterij_unique = {}
+        self.interval_end = {}
+        self.interval_end_2 = {}
         self.EV_unique = {}
         self.AC_unique = {}
         self.KC_unique = {}
@@ -37,6 +40,13 @@ class data_retrieval_appliances:
         self.overig_keys = [names for names in self.column_names if 'overig' in names]
         return self.main_keys, self.bat_keys, self.EV_keys,self.AC_keys, self.KC_keys, self.WP_keys_buf, self.WP_keys_no_buf, self.WWB_keys, self.overig_keys
 
+    def time_to_interval(self, time_str):
+        if pd.isna(time_str):
+            return 0
+        hours, minutes = map(int, time_str.split(':'))
+        total_minutes = hours * 60 + minutes
+        interval = total_minutes // 15 + 1
+        return interval
 
     #per type of appliance filter out non relevant information so the size of the df is decreased and logical
     def batterij(self):
@@ -44,6 +54,10 @@ class data_retrieval_appliances:
         batterij = batterij.loc[:, self.main_keys + self.bat_keys]
         for type in self.unique_type_flex:
             self.batterij_unique[type] = batterij[batterij['type_flex_main'] == type]
+            self.interval_end[type] = self.batterij_unique[type]['end_time_bat'].apply(self.time_to_interval)
+            self.interval_end_2[type] = self.batterij_unique[type]['end_time2_bat'].apply(self.time_to_interval)
+            self.batterij_unique[type].loc[:,'end_time_bat_PTE'] = self.interval_end[type]
+            self.batterij_unique[type].loc[:, 'end_time2_bat_PTE'] = self.interval_end_2[type]
         return self.batterij_unique
 
     def EVlaadpaal(self):

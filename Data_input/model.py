@@ -28,14 +28,21 @@ class model:
         self.onbalanskosten = self.onbalanskosten.fillna(0)
         self.regeltoestanden = [1, -1, 0, 2]
         self.total_hour_variable = 0
+        self.bigM = 1000
 
 
     def run_model(self, batterij, time_list_valid):
-        self.variable(batterij=batterij)
-        self.parameters(batterij, time_list_valid)
+        self.batterij = batterij
+        self.batterij = self.batterij.iloc[:2]
+        self.batterij = self.retrieve_SOC_battery.get_SOC_battery(self.batterij)
+        print('run model ', self.batterij)
+        self.variable(batterij=self.batterij)
+        self.parameters(batterij=self.batterij, time_list_valid=time_list_valid)
         self.constraints()
 
     def variable(self, batterij):
+        self.batterij = batterij
+        print('variabel', self.batterij)
         #Imbalance costs variables
         self.model.imbalance_costs_before_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_costs_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
@@ -87,18 +94,37 @@ class model:
         self.model.relevant_difference = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
 
         # Battery variables
-        self.model.number_batteries = pyomo.Set(initialize=range(len(batterij)))
+        self.model.number_batteries = pyomo.Set(initialize=range(len(self.batterij)))
+        print(range(len(self.batterij)))
         self.model.batterij_SOC = pyomo.Var(self.model.Time,self.model.number_batteries, within=pyomo.Any)
         self.model.batterij_activation_boolean_charge = pyomo.Var(self.model.Time,self.model.number_batteries, within=pyomo.Binary)
         self.model.batterij_activation_boolean_discharge = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.Binary)
+
+        # Boolean variables (again indexed by Time)
+        self.model.batterij_boolChar = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.Binary)
+        self.model.batterij_boolDis = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.Binary)
+
+        # Aux variables
+        self.model.batterij_powerTotal = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.Integers)
+        self.model.batterij_powerCharge = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.NonNegativeReals)
+        self.model.batterij_powerDischarge = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.NonPositiveReals)
+        # self.model.batterij_UpperDoD = pyomo.Var(self.model.Time,self.model.number_batteries)
+        # self.model.batterij_LowerDoD = pyomo.Var(self.model.Time, self.model.number_batteries)
+        self.model.bat_elec_costs = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.Any)
+
         self.model.batterij_energyNotServed = pyomo.Var(self.model.Time, self.model.number_batteries)
         self.model.batterij_energyNotServedFactor = pyomo.Var(self.model.Time, self.model.number_batteries)
+        self.model.batterij_energyNotServedFactor_below = pyomo.Var(self.model.Time, self.model.number_batteries, bounds=(0,1000), within=pyomo.NonNegativeReals)
+        self.model.batterij_energyNotServedFactor_higher = pyomo.Var(self.model.Time, self.model.number_batteries, bounds=(0,1000), within=pyomo.NonNegativeReals)
+        self.model.batterij_energyNotServedFactor_below_boolean = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.Binary)
+        self.model.batterij_energyNotServedFactor_higher_boolean = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.Binary)
+
+
 
     def parameters(self, batterij, time_list_valid):
         self.batterij = batterij
-        self.batterij = self.retrieve_SOC_battery.get_SOC_battery(batterij)
         self.time_lists = pd.DataFrame.from_dict(time_list_valid)
-        #print(self.batterij.to_string())
+        #print('parameters',self.batterij.to_string())
         #print(self.time_lists.to_string())
 
         # Get data from variables into a parameter
@@ -162,16 +188,21 @@ class model:
             return self.onbalanskosten.iloc[i, j]
 
         #Get all the battery information into parameters
-        self.model.range_options_batterij_metopwek = pyomo.Set(initialize=range(self.time_lists.shape[1]))
+        self.model.range_options_batterij_metopwek_time_list = pyomo.Set(initialize=range(self.time_lists.shape[1]))
+        self.model.range_options_batterij_metopwek = pyomo.Set(initialize=range(self.batterij.shape[0]))
+        #print('shape', self.time_lists.shape[1], self.time_lists.shape[0])
         self.model.range_options_info_shape_batterij_metopwek = pyomo.Set(initialize=range(self.batterij.shape[1]))
-        self.model.time_valid_batterij_metopwek = pyomo.Param(self.model.range_options_batterij_metopwek, self.model.Time, mutable=True, initialize=time_list_batterij_metopwek, within=pyomo.Any)
-        self.model.info_batterij_metopwek = pyomo.Param(self.model.range_options_info_shape_batterij_metopwek, self.model.range_options_batterij_metopwek, mutable=True, initialize=info_batterij_metopwek,within=pyomo.Any)
+        #print('shape batterij', self.batterij.shape[1], self.batterij.shape[0])
+        self.model.time_valid_batterij_metopwek = pyomo.Param(self.model.range_options_batterij_metopwek_time_list, self.model.Time, mutable=True, initialize=time_list_batterij_metopwek, within=pyomo.Any)
+        self.model.info_batterij_metopwek = pyomo.Param(self.model.range_options_info_shape_batterij_metopwek, self.model.range_options_batterij_metopwek, mutable=False, initialize=info_batterij_metopwek,within=pyomo.Any)
 
         # Get the imbalance prices into parameters
         self.model.range_options_onbalanskosten = pyomo.Set(initialize=range(self.onbalanskosten.shape[1]))
         self.model.onbalanskosten = pyomo.Param(self.model.Time,self.model.range_options_onbalanskosten, mutable=True, initialize=imbalance_costs, within=pyomo.Any)
         self.model.regeltoestand_options = pyomo.Param(self.model.Time, self.model.range_options_onbalans, mutable=True, initialize={(t,x): self.regeltoestanden[x] for t in self.model.Time for x in self.model.range_options_onbalans}, within=pyomo.Integers)
-
+        #self.model.batterij_c_rate = pyomo.Param(initialize = 0.25)
+        self.model.batterij_DoD = pyomo.Param(initialize = 0.1)
+        self.model.batterij_efficiency = pyomo.Param(initialize = 0.9)
 
 
     def constraints(self):
@@ -258,26 +289,94 @@ class model:
         self.model.wind_dif = pyomo.Constraint(self.model.Time, rule=wind_dif)
 
         def relevant_dif(model,t):
-            return model.relevant_difference[t] ==  model.wind_difference[t] + model.solar_difference[t]
+            return model.relevant_difference[t] == model.wind_difference[t] + model.solar_difference[t]
         self.model.relevant_dif = pyomo.Constraint(self.model.Time, rule=relevant_dif)
 
         def battery_SOC(model, t, x):
             if t == 0:
-                return model.batterij_SOC[t,x] == model.info_batterij_metopwek[9,x] * model.info_batterij_metopwek[4,x]
+                return model.batterij_SOC[t,x] == model.info_batterij_metopwek[11,x] * model.info_batterij_metopwek[4,x]
             elif t == self.current_interval:
-                return model.batterij_SOC[t,x] == model.info_batterij_metopwek[9,x] * model.info_batterij_metopwek[4,x]
+                return model.batterij_SOC[t,x] == model.info_batterij_metopwek[11,x] * model.info_batterij_metopwek[4,x]
             else:
-                return model.batterij_SOC[t,x] == model.batterij_SOC[t-1,x] + (model.info_batterij_metopwek[4,x]* model.time_valid_batterij_metopwek[x,t]) * (model.batterij_activation_boolean_charge[t,x]+(-model.batterij_activation_boolean_discharge[t,x]))
+                return model.batterij_SOC[t,x] == model.batterij_SOC[t-1,x] + (model.batterij_powerCharge[t,x]*model.batterij_efficiency) + (model.batterij_powerDischarge[t,x]*model.batterij_efficiency)
         self.model.battery_SOC = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC)
 
-        def battery_SOC_boolean(model, t, x):
-            return model.batterij_activation_boolean_charge[t,x]+model.batterij_activation_boolean_discharge[t,x] <= 1
-        self.model.battery_SOC_boolean = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_boolean)
+        #(model.info_batterij_metopwek[3,x]* model.time_valid_batterij_metopwek[x,t]) * (model.batterij_activation_boolean_charge[t,x] +(-model.batterij_activation_boolean_discharge[t,x]))
 
-        ##Dit werkt nog niet, want absoluut werkt hier niet, kijken hoe ik dit aanpak
-        # def battery_SOC_notservedfactor(model, t, x):
-        #     return model.battery_SOC_notservedfactor[t,x] == model.batterij_SOC[t,x]-(model.info_batterij_metopwek[4,x]*model.info_batterij_metopwek[5,x])
-        # self.model.battery_SOC_notservedfactor = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_notservedfactor)
+        # To prevent charging and discharging simultaneously
+        # http://www.eseslab.com/posts/blogPost_batt_schedule_optimal
+        def BatteryBigMRule1(model, t,x):
+            bigM=self.bigM
+            return(model.batterij_powerCharge[t,x] <= bigM * (1-model.batterij_boolDis[t,x]))
+        self.model.BatteryBigMRule1 = pyomo.Constraint(self.model.Time,self.model.number_batteries, rule=BatteryBigMRule1)
+
+        def BatteryBigMRule2(model, t,x):
+            bigM=self.bigM
+            return(model.batterij_powerCharge[t,x] >= -bigM * model.batterij_boolChar[t,x])
+        self.model.BatteryBigMRule2 = pyomo.Constraint(self.model.Time,self.model.number_batteries, rule=BatteryBigMRule2)
+
+        def BatteryBigMRule3(model, t,x):
+            bigM=self.bigM
+            return(model.batterij_powerDischarge[t,x] >= -bigM * model.batterij_boolDis[t,x])
+        self.model.BatteryBigMRule3 = pyomo.Constraint(self.model.Time,self.model.number_batteries, rule=BatteryBigMRule3)
+
+        def BatteryBigMRule4(model, t,x):
+            bigM=self.bigM
+            return(model.batterij_powerDischarge[t,x] <= bigM * (1-model.batterij_boolChar[t,x]))
+        self.model.BatteryBigMRule4 = pyomo.Constraint(self.model.Time,self.model.number_batteries, rule=BatteryBigMRule4)
+
+        def BatteryBigMRule5(model, t,x):
+            return(model.batterij_boolChar[t,x] + model.batterij_boolDis[t,x] == 1)
+        self.model.BatteryBigMRule5 = pyomo.Constraint(self.model.Time,self.model.number_batteries, rule=BatteryBigMRule5)
+
+        ## limit charging and discharging
+        def battery_charge_max(model, t, x):
+            return model.batterij_powerCharge[t,x] <= model.info_batterij_metopwek[3,x]
+        self.model.battery_charge_max = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_max)
+
+        def battery_charge_min(model, t, x):
+            return model.batterij_powerCharge[t,x] >= 0
+        self.model.battery_charge_min = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_min)
+
+        def battery_discharge_max(model, t, x):
+            return model.batterij_powerDischarge[t,x] >= -model.info_batterij_metopwek[3,x]
+        self.model.battery_discharge_max = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_discharge_max)
+
+        def battery_discharge_min(model, t, x):
+            return model.batterij_powerDischarge[t,x] <= 0
+        self.model.battery_discharge_min = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_discharge_min)
+
+
+        ## Make sure that the DoD are adheres
+        def battery_SOC_max(model, t, x):
+            return model.batterij_SOC[t,x] <= (1-model.batterij_DoD)*model.info_batterij_metopwek[4,x]
+        self.model.battery_SOC_max = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_max)
+
+        def battery_SOC_min(model, t, x):
+            return model.batterij_SOC[t,x] >= model.batterij_DoD* model.info_batterij_metopwek[4,x]
+        self.model.battery_SOC_min = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_min)
+
+        ## assure it adheres the moment it needs to be at the final SOC to not limit users
+        def battery_SOC_notservedfactor_high(model, t, x):
+                return model.batterij_energyNotServedFactor_higher[t,x] == ((model.batterij_SOC[t,x]-(model.info_batterij_metopwek[4,x]*model.info_batterij_metopwek[5,x])) * model.batterij_energyNotServedFactor_higher_boolean[t,x])
+        self.model.battery_SOC_notservedfactor_high = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_notservedfactor_high)
+
+        def battery_SOC_notservedfactor_low(model, t, x):
+                return model.batterij_energyNotServedFactor_below[t,x] == (((model.info_batterij_metopwek[4,x]*model.info_batterij_metopwek[5,x])-model.batterij_SOC[t,x]) * model.batterij_energyNotServedFactor_below_boolean[t,x])
+        self.model.battery_SOC_notservedfactor_low = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_notservedfactor_low)
+
+        def battery_SOC_notservedfactor(model, t, x):
+                return model.batterij_energyNotServedFactor[t,x] == model.batterij_energyNotServedFactor_higher[t,x] + model.batterij_energyNotServedFactor_below[t,x]
+        self.model.battery_SOC_notservedfactor = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_notservedfactor)
+
+        def battery_SOC_notservedfactor_bol(model, t, x):
+                return model.batterij_energyNotServedFactor_below_boolean[t,x] + model.batterij_energyNotServedFactor_higher_boolean[t,x] == 1
+        self.model.battery_SOC_notservedfactor_bol = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_notservedfactor_bol)
+
+        def battery_charge_discharge_costs(model, t, x):
+                return model.bat_elec_costs[t,x] == ((model.batterij_powerCharge[t,x]*model.batterij_efficiency) + (model.batterij_powerDischarge[t,x]*model.batterij_efficiency))* (model.epex_price[t]/1000)
+        self.model.battery_charge_discharge_costs = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_discharge_costs)
+
 
         ##### ANALYSIS PART THIS PART ANALYSES WHAT THE ONVERMIJDBAAR IMBALANCE IS AND WHAT HAPPENS IF WE COMPENSATE BASED ON WEATHER DATA
         ##### ASSUMING THAT THE FORECAST IS VERY CLOSE TO THE ACTUALS

@@ -8,7 +8,7 @@ from Data_retrieval_Tennet_situation import import_data_per_day
 #import libraries
 from datetime import datetime
 
-timestamp= 20231218                                #select the data for which the code runs
+timestamp= 20231207                                #select the data for which the code runs
 current_interval = 0                                    #select interval from which the code runs
 
 #change dates to usable format
@@ -32,7 +32,7 @@ all_appliances = {}
 #Create lists to select the relevant data needed for the optimizer
 appl = ['batterij', 'EVlaadpaal', 'AC', 'KC', 'WP_buf', 'WP_no_buf', 'WWB', 'overig']
 main_keys = ['appl_id_main','PiekAansluiting_main', 'type_flex_main']
-bat_keys = ['charge_KW_bat','size_kWh_bat','SOC_eind_1_bat','SOC_eind_2_bat', 'ICT_APPL_bat']
+bat_keys = ['charge_KW_bat','size_kWh_bat','SOC_eind_1_bat','end_time_bat_PTE', 'SOC_eind_2_bat','end_time2_bat_PTE', 'ICT_APPL_bat']
 
 
 #retrieve the data per appliance and create a list per appliance when flex is available
@@ -45,8 +45,8 @@ for index, appliance in enumerate(data_retr_appl.get_all()):
 all_appliances['batterij']['Zonder opwek'].fillna(999, inplace=True)# for appliance in appl:
 
 #Initialize and run the optimizer
-optimizer_imbalance = optimizer(allocation_trading=allocation_trading, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], current_interval=current_interval, date=date)
-optimizer_imbalance.run(batterij=all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys], time_list_valid=time_list_valid['batterij']['Zonder opwek'])
+optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys], onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], current_interval=current_interval, date=date)
+optimizer_imbalance.run(time_list_valid=time_list_valid['batterij']['Zonder opwek'])
 
 #     print(time_list_valid[appliance])
 #     for types in unique_types:

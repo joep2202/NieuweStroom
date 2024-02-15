@@ -9,7 +9,10 @@ class retrieve_SOC:
         ## use line below in a later stage but having the same numbers is nice for testing
         #self.random_soc = [round(random.uniform(0.25, 0.75),2) for i in range(len(batterij))]
         #print(self.random_soc)
+        self.random_soc = self.random_soc[0:len(batterij)]
+        print('Random SOC', self.random_soc,len(batterij), batterij.shape[0])
         batterij['Availability'] = 'Yes'
         batterij['current_SOC'] = self.random_soc
-        print(batterij.to_string())
+        batterij['aansluiting ruimte'] = batterij['PiekAansluiting_main'] - (batterij['PiekAansluiting_main']*0.7)
+        print('get SOC', batterij.to_string())
         return batterij
