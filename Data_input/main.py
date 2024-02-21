@@ -42,7 +42,7 @@ for index, appliance in enumerate(data_retr_appl.get_all()):
     all_appliances[appl[index]] = appliance
 
 #fill the NaN with a high number because the optimizer can't handle NaN and now the become irrelevant
-all_appliances['batterij']['Zonder opwek'].fillna(999, inplace=True)# for appliance in appl:
+all_appliances['batterij']['Zonder opwek'].fillna(0, inplace=True)# for appliance in appl:
 
 #Initialize and run the optimizer
 optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys], onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], current_interval=current_interval, date=date)
