@@ -50,6 +50,8 @@ class model:
         self.model.imbalance_costs_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_costs_before_flex_total = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_costs_before_flex_epex = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.imbalance_costs_after_flex_total = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.imbalance_costs_after_flex_epex = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_costs_before_flex_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_costs_before_flex_total_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_costs_before_flex_epex_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
@@ -75,12 +77,18 @@ class model:
         self.model.difference_MWh_plot_onvermijdbaar = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
         self.model.boolean_difference_afregelen_onvermijdbaar = pyomo.Var(self.model.Time, within=pyomo.Binary)
         self.model.boolean_difference_opregelen_onvermijdbaar = pyomo.Var(self.model.Time, within=pyomo.Binary)
+        self.model.difference_MWh_afregelen_after_flex = pyomo.Var(self.model.Time, bounds=(-100, 100),within=pyomo.NonNegativeReals)
+        self.model.difference_MWh_opregelen_after_flex = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.NonNegativeReals)
+        self.model.difference_MWh_plot_after_flex = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
+        self.model.boolean_difference_afregelen_after_flex = pyomo.Var(self.model.Time, within=pyomo.Binary)
+        self.model.boolean_difference_opregelen_after_flex = pyomo.Var(self.model.Time, within=pyomo.Binary)
 
         #allocatie forecasts and actuals
         self.model.total_forecast = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_trading = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_trading_adapted = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.total_after_flex_hour = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_hour_v_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_hour_v_programma_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.total_forecast_hour_e_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
@@ -111,6 +119,8 @@ class model:
         self.model.batterij_powerDischarge = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.NonPositiveReals)
         self.model.batterij_powerCharge_final = pyomo.Var(self.model.Time, self.model.number_batteries,within=pyomo.NonNegativeReals)
         self.model.batterij_powerDischarge_final = pyomo.Var(self.model.Time, self.model.number_batteries,within=pyomo.NonPositiveReals)
+        self.model.batterij_powerCharge_to_grid = pyomo.Var(self.model.Time, self.model.number_batteries,within=pyomo.NonNegativeReals)
+        self.model.batterij_powerDischarge_to_grid = pyomo.Var(self.model.Time, self.model.number_batteries,within=pyomo.NonPositiveReals)
         self.model.bat_elec_costs = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.Any)
         self.model.bat_elec_costs_total = pyomo.Var(self.model.Time, self.model.number_batteries, within=pyomo.Any)
 
@@ -301,18 +311,26 @@ class model:
             elif t == self.current_interval:
                 return model.batterij_SOC[t,x] == model.info_batterij_metopwek[11,x] * model.info_batterij_metopwek[4,x]
             else:
-                return model.batterij_SOC[t,x] == model.batterij_SOC[t-1,x] + model.batterij_powerCharge_final[t,x] + model.batterij_powerDischarge_final[t,x]
+                return model.batterij_SOC[t,x] == model.batterij_SOC[t-1,x] + ((model.batterij_powerCharge_final[t,x] + model.batterij_powerDischarge_final[t,x])/4)
         self.model.battery_SOC = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC)
 
         #(model.info_batterij_metopwek[3,x]* model.time_valid_batterij_metopwek[x,t]) * (model.batterij_activation_boolean_charge[t,x] +(-model.batterij_activation_boolean_discharge[t,x]))
 
         def battery_charge_if_valid(model, t, x):
-            return model.batterij_powerCharge_final[t,x] == (model.batterij_powerCharge[t,x]*model.batterij_efficiency)*model.time_valid_batterij_metopwek[x,t]
+            return model.batterij_powerCharge_final[t,x] == ((model.batterij_powerCharge[t,x]/4)*model.batterij_efficiency)*model.time_valid_batterij_metopwek[x,t]
         self.model.battery_charge_if_valid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_if_valid)
 
         def battery_discharge_if_valid(model, t, x):
-            return model.batterij_powerDischarge_final[t,x] == (model.batterij_powerDischarge[t,x])*model.time_valid_batterij_metopwek[x,t]
+            return model.batterij_powerDischarge_final[t,x] == ((model.batterij_powerDischarge[t,x]/4))*model.time_valid_batterij_metopwek[x,t]
         self.model.battery_discharge_if_valid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_discharge_if_valid)
+
+        def battery_charge_to_grid(model, t, x):
+            return model.batterij_powerCharge_to_grid[t,x] == ((model.batterij_powerCharge[t,x]/4)*model.time_valid_batterij_metopwek[x,t])/1000
+        self.model.battery_charge_to_grid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_to_grid)
+
+        def battery_discharge_to_grid(model, t, x):
+            return model.batterij_powerDischarge_to_grid[t,x] == (((model.batterij_powerDischarge[t,x]/4)*model.batterij_efficiency)*model.time_valid_batterij_metopwek[x,t])/1000
+        self.model.battery_discharge_to_grid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_discharge_to_grid)
 
         # To prevent charging and discharging simultaneously
         # http://www.eseslab.com/posts/blogPost_batt_schedule_optimal
@@ -342,7 +360,7 @@ class model:
 
         ## limit charging and discharging
         def battery_charge_max(model, t, x):
-            return model.batterij_powerCharge[t,x] <= model.info_batterij_metopwek[3,x]/4
+            return model.batterij_powerCharge[t,x] <= model.info_batterij_metopwek[3,x]
         self.model.battery_charge_max = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_max)
 
         def battery_charge_min(model, t, x):
@@ -350,7 +368,7 @@ class model:
         self.model.battery_charge_min = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_min)
 
         def battery_discharge_max(model, t, x):
-            return model.batterij_powerDischarge[t,x] >= -model.info_batterij_metopwek[3,x]/4
+            return model.batterij_powerDischarge[t,x] >= -model.info_batterij_metopwek[3,x]
         self.model.battery_discharge_max = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_discharge_max)
 
         def battery_discharge_min(model, t, x):
@@ -394,6 +412,61 @@ class model:
             else:
                 return model.bat_elec_costs_total[t,x] == model.bat_elec_costs_total[t-1,x] + model.bat_elec_costs[t,x]
         self.model.battery_charge_discharge_costs_total = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_discharge_costs_total)
+
+        # after flex imbalance calculation
+        def allocatie_adapted_flex(model,t):
+            return model.total_after_flex[t] == model.total_forecast[t] + sum(model.batterij_powerCharge_to_grid[t,x] for x in model.number_batteries) + sum(model.batterij_powerDischarge_to_grid[t,x] for x in model.number_batteries)
+        self.model.allocatie_adapted_flex = pyomo.Constraint(self.model.Time, rule=allocatie_adapted_flex)
+
+        def total_assumed_hour_after_flex(model,t):
+            if t % 4 == 0:
+                self.total_hour_variable = t
+            return model.total_after_flex_hour[t] == ((model.total_after_flex[0+self.total_hour_variable] + model.total_after_flex[1+self.total_hour_variable] + model.total_after_flex[2+self.total_hour_variable] + model.total_after_flex[3+self.total_hour_variable])/4) + model.trading_volume[t]
+        self.model.total_assumed_hour_after_flex = pyomo.Constraint(self.model.Time, rule=total_assumed_hour_after_flex)
+
+        # Calculate the difference between forecasted total and actual total done seperately to be able to calculate imbalance cost.
+        def difference_in_MWh_afregelen_after_flex(model, t):
+            return model.difference_MWh_afregelen_after_flex[t] == (model.total_after_flex_hour[t] - model.totaal_allocatie[t]) * model.boolean_difference_afregelen_after_flex[t]
+        self.model.difference_in_MWh_afregelen_after_flex = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_afregelen_after_flex)
+
+        def difference_in_MWh_opregelen_after_flex(model, t):
+            return model.difference_MWh_opregelen_after_flex[t] == (model.totaal_allocatie[t] - model.total_after_flex_hour[t]) * model.boolean_difference_opregelen_after_flex[t]
+        self.model.difference_in_MWh_opregelen_after_flex = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_opregelen_after_flex)
+
+        def difference_in_MWh_boolean_after_flex(model, t):
+            return model.boolean_difference_afregelen_after_flex[t] + model.boolean_difference_opregelen_after_flex[t] == 1
+        self.model.difference_in_MWh_boolean_after_flex = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_boolean_after_flex)
+        #
+        def difference_in_MWh_plot_after_flex(model, t):
+            return model.difference_MWh_plot_after_flex[t] == model.total_after_flex_hour[t] - model.totaal_allocatie[t]
+        self.model.difference_in_MWh_plot_after_flex = pyomo.Constraint(self.model.Time, rule=difference_in_MWh_plot_after_flex)
+
+        # Calculate the imbalance cost per 15 minutes and in total
+        def imbalance_cost_after_flex(model, t):
+            return model.imbalance_costs_after_flex[t] == (model.onbalanskosten[t, 0] * model.boolean_select_imbalance[t, 0] * -model.difference_MWh_plot_after_flex[t]) + \
+                   (model.onbalanskosten[t, 1] * model.boolean_select_imbalance[t, 1] * - model.difference_MWh_plot_after_flex[t]) + \
+                   (((model.onbalanskosten[t, 0] * model.difference_MWh_opregelen_after_flex[t]) +
+                     (model.onbalanskosten[t, 1] * -model.difference_MWh_afregelen_after_flex[t])) * model.boolean_select_imbalance[t, 3]) + \
+                   (model.onbalanskosten[t, 3] * model.boolean_select_imbalance[t, 2] * - model.difference_MWh_plot_after_flex[t])
+                    # +(model.onbalanskosten[t,3]*model.boolean_select_imbalance[t,2]*((model.difference_MWh_afregelen[t]* model.boolean_difference_afregelen[t])+(model.difference_MWh_opregelen[t]* model.boolean_difference_opregelen[t])))
+        self.model.imbalance_cost_after_flex = pyomo.Constraint(self.model.Time, rule=imbalance_cost_after_flex)
+
+        def imbalance_cost_epex_after_flex(model, t):
+            return model.imbalance_costs_after_flex_epex[t] == ((model.epex_price[t] - model.onbalanskosten[t, 0]) * model.boolean_select_imbalance[t, 0] * (model.difference_MWh_plot_after_flex[t])) + \
+                   ((model.epex_price[t] - model.onbalanskosten[t, 1]) * model.boolean_select_imbalance[t, 1] * (model.difference_MWh_plot_after_flex[t])) + \
+                   ((model.epex_price[t] - model.onbalanskosten[t, 3]) * model.boolean_select_imbalance[t, 2] * (model.difference_MWh_plot_after_flex[t])) + \
+                   ((((model.epex_price[t] - model.onbalanskosten[t, 0]) * -model.difference_MWh_opregelen_after_flex[t]) +
+                     ((model.epex_price[t] - model.onbalanskosten[t, 1]) *model.difference_MWh_afregelen_after_flex[t])) * model.boolean_select_imbalance[t, 3])
+        self.model.imbalance_cost_epex_after_flex = pyomo.Constraint(self.model.Time, rule=imbalance_cost_epex_after_flex)
+
+        def imbalance_costs_total_after_flex(model, t):
+            if t == 0:
+                return model.imbalance_costs_after_flex_total[t] == model.imbalance_costs_after_flex_epex[t]
+            elif t == self.current_interval:
+                return model.imbalance_costs_after_flex_total[t] == model.imbalance_costs_after_flex_epex[t]
+            else:
+                return model.imbalance_costs_after_flex_total[t] == model.imbalance_costs_after_flex_total[t - 1] + model.imbalance_costs_after_flex_epex[t]
+        self.model.imbalance_costs_total_after_flex = pyomo.Constraint(self.model.Time, rule=imbalance_costs_total_after_flex)
 
         ##### ANALYSIS PART THIS PART ANALYSES WHAT THE ONVERMIJDBAAR IMBALANCE IS AND WHAT HAPPENS IF WE COMPENSATE BASED ON WEATHER DATA
         ##### ASSUMING THAT THE FORECAST IS VERY CLOSE TO THE ACTUALS
