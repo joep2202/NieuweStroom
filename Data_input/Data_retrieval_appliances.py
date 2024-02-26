@@ -45,7 +45,7 @@ class data_retrieval_appliances:
             return 0
         hours, minutes = map(int, time_str.split(':'))
         total_minutes = hours * 60 + minutes
-        interval = total_minutes // 15 + 1
+        interval = total_minutes // 15
         return interval
 
     #per type of appliance filter out non relevant information so the size of the df is decreased and logical

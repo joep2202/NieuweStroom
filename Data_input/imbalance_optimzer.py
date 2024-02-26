@@ -13,11 +13,11 @@ class optimizer:
         self.current_interval = current_interval
         # initialize model
         self.batterij = batterij
-        #self.batterij = self.batterij.iloc[0:5]
+        #self.batterij = self.batterij.iloc[0:1]
         self.model_imbalance = model(self.model, allocation_trading=allocation_trading, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature, current_interval=self.current_interval)
         self.model.horizon = self.horizon
         self.model.Time = pyomo.RangeSet(0, self.model.horizon - 1)
-        self.solver_time_limit = 15
+        self.solver_time_limit = 45
         self.onbalanskosten_check = pd.read_csv('data/Onbalanskosten_check.csv')
         self.onbalanskosten_check = self.onbalanskosten_check[
         self.onbalanskosten_check['From_NL'].str.contains(date)].reset_index(drop=True)
@@ -32,7 +32,10 @@ class optimizer:
     def ObjectiveFunction(self, model):
         return sum([model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] +\
                     [model.imbalance_costs_after_flex_total[95]])
-                   #[model.bat_elec_costs_total[95, x] for x in model.number_batteries]
+                    #[model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] +\
+                    #[model.imbalance_costs_after_flex_total[95]]) [model.batterij_powerDischarge_to_grid[t,x] for x in model.number_batteries for t in model.Time]
+                   #[model.bat_elec_costs_total[95, x] for x in model.number_batteries] model.batterij_powerCharge_to_grid[95,x] for x in model.number_batteries]
+
 
     def run(self, time_list_valid):
         self.model_imbalance.run_model(batterij=self.batterij, time_list_valid=time_list_valid)
@@ -45,7 +48,7 @@ class optimizer:
         result = opt.solve(self.model)
 
         #self.model.batterij_energyNotServedFactor.pprint()
-        #self.model.onbalanskosten.pprint()
+        # self.model.time_valid_batterij_metopwek.pprint()
         # catch if results are correctly solved or not
         if (result.solver.status == SolverStatus.ok) and (
                 result.solver.termination_condition == TerminationCondition.optimal):
@@ -106,32 +109,38 @@ class optimizer:
         batterij_powerDischarge_to_grid = pd.Series(self.model.batterij_powerDischarge_to_grid.extract_values(),name=self.model.batterij_powerDischarge_to_grid.name)
         bat_elec_costs = pd.Series(self.model.bat_elec_costs.extract_values(),name=self.model.bat_elec_costs.name)
         bat_elec_costs_total = pd.Series(self.model.bat_elec_costs_total.extract_values(), name=self.model.bat_elec_costs_total.name)
+        time_valid_batterij = pd.Series(self.model.time_valid_batterij.extract_values(), name=self.model.time_valid_batterij.name)
         # print(batterij_SOC, type(batterij_SOC))
         # print(batterij_SOC[:,0][15:])
 
         self.onbalanskosten_check['cum'] = self.onbalanskosten_check['Imbalance_Costs'].cumsum()
         # print(self.onbalanskosten_check.to_string())
 
-        # for x in range(len(batterij_energyNotServedFactor[0,:,0])):
-        #     for z in range(2):
-        #         #print(self.batterij)
-        #         print(x, z, self.objective_list[z],self.batterij[self.objective_list[z]].iloc[x], batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z])
-        #         print(self.batterij[self.objective_list[z]].iloc[x])
-        #         self.check += batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z]*100
+        for x in range(len(batterij_energyNotServedFactor[0,:,0])):
+            for z in range(2):
+                #print(self.batterij)
+                print(x, z, self.batterij[self.objective_list[z]].iloc[x], batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z])
+                # print(self.batterij[self.objective_list[z]].iloc[x])
+                self.check += batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z]
         #     print(x,'bat', bat_elec_costs_total[95, x])
         #     self.check += bat_elec_costs_total[95, x]
-        # print('check', self.check)
+        print('check', self.check)
 
         print(len(batterij_energyNotServedFactor[0,:,0]))
-        print('finalsum', sum([batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] * 100 for z in range(2) for x in range(len(batterij_energyNotServedFactor[0,:,0]))]))
+        print('finalsum', sum([batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] for z in range(2) for x in range(len(batterij_energyNotServedFactor[0,:,0]))]))
         print('finalsum imbalance', imbalance_costs_after_flex_total[95], 'old', imbalance_before_flex_total[95], 'difference',imbalance_before_flex_total[95]- imbalance_costs_after_flex_total[95])
-
+        # for t in range(96):
+        #     for x in range(len(batterij_energyNotServedFactor[0,:,0])):
+        #         print(t,x, 'dis grid', batterij_powerDischarge_to_grid[t,x], 'char',batterij_powerCharge[t,x],'char grid', batterij_powerCharge_to_grid[t,x],'Dis', batterij_powerDischarge[t,x], 'valid', time_valid_batterij[t,x])
+        #print(sum([batterij_powerCharge_to_grid[t,x] for x in range(len(batterij_energyNotServedFactor[0,:,0])) for t in range(96)]))
 
 
         # print some of the results to be able to analyse them in depth
-        # print('timelist', self.model.time_valid_batterij_metopwek.extract_values())
-        # print('info bat', self.model.info_batterij_metopwek.extract_values())
-        # print('bat SOC', self.model.batterij_SOC.extract_values())
+        # print('ch', self.model.batterij_powerCharge_to_grid.extract_values())
+        # print('dis', self.model.batterij_powerDischarge_to_grid.extract_values())
+        # print('ch var', self.model.batterij_powerCharge.extract_values())
+        # print('dis var', self.model.batterij_powerDischarge.extract_values())
+        # print('bat not served', self.model.batterij_energyNotServedFactor.extract_values())
         # print('bat_elec_costs', self.model.bat_elec_costs.extract_values())
         # print('batterij_energyNotServedFactor', self.model.batterij_energyNotServedFactor.extract_values())
         # print('batterij_energyNotServedFactor_high', self.model.batterij_energyNotServedFactor_higher.extract_values())
@@ -141,7 +150,15 @@ class optimizer:
         # print('imbalance cumulatief', self.model.imbalance_costs_before_flex_total.extract_values())
         # print('imbalance', self.model.imbalance_costs_before_flex.extract_values())
         # print('imbalance epex', self.model.imbalance_costs_before_flex_epex.extract_values())
-        # print(imbalance_before_flex_total)
+        pd.set_option('display.max_rows', None)
+
+        # Print the entire Series
+        #print(total_after_flex_hour-total_forecast_hour_v_programma)
+
+
+        # Reset display options to default
+        pd.reset_option('display.max_rows')
+
         # print(imbalance_costs_after_flex_total)
         batterij_powerCharge_to_grid_cum = []
         batterij_powerDischarge_to_grid_cum = []
@@ -262,21 +279,21 @@ class optimizer:
         colors = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black', 'darkblue', 'darkgreen', 'darkred',
                   'darkcyan', 'darkmagenta', 'darkgoldenrod', 'lightblue', 'lightgreen', 'lightcoral', 'lightcyan',
                   'slategray']
-        # for z in range(len(batterij_SOC[0, :])):
-        #     ax2[0].plot(batterij_SOC[:, z][self.current_interval:], label='Battery SOC'+str(z), color=colors[z])
-        # ax3 = ax2[0].twinx()
-        # ax3.plot(epex_price[self.current_interval:], label='Epex', color='black')
-        # ax2[0].set(xlabel='time (h)', ylabel='kWh')
-        # ax2[0].set_xticks(x)
-        # ax2[0].set_xticklabels(x_ticks_labels)
-        # ax2[0].grid()
-        # ax2[0].legend()
-
+        for z in range(5):
+            ax2[0].plot(batterij_SOC[:, z][self.current_interval:], label='Battery SOC'+str(z), color=colors[z])
+        ax3 = ax2[0].twinx()
+        ax3.plot(epex_price[self.current_interval:], label='Epex', color='black')
+        ax2[0].set(xlabel='time (h)', ylabel='kWh')
+        ax2[0].set_xticks(x)
+        ax2[0].set_xticklabels(x_ticks_labels)
+        ax2[0].grid()
+        ax2[0].legend()
+        #
         # for z in range(len(batterij_SOC[0, :])):
         #     ax2[1].plot(batterij_powerCharge[:, z][self.current_interval:], label='Charge'+str(z), color=colors[z])
         #     ax2[1].plot(batterij_powerDischarge[:, z][self.current_interval:], label='Discharge'+str(z), color=colors[z])
         ax2[1].plot(batterij_powerCharge_to_grid_cum[self.current_interval:], label='Charge', color='blue')
-        ax2[1].plot(batterij_powerDischarge_to_grid_cum[self.current_interval:], label='Discharge', color='blue')
+        ax2[1].plot(batterij_powerDischarge_to_grid_cum[self.current_interval:], label='Discharge', color='green')
         ax2[1].set(xlabel='time (h)', ylabel='MW')
         ax2[1].set_xticks(x)
         ax2[1].set_xticklabels(x_ticks_labels)

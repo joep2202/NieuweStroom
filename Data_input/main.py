@@ -9,7 +9,7 @@ import pandas as pd
 #import libraries
 from datetime import datetime
 
-timestamp= 20231215                                #select the data for which the code runs
+timestamp= 20231220                                #select the data for which the code runs
 current_interval = 0                                    #select interval from which the code runs
 
 #change dates to usable format
