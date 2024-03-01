@@ -15,5 +15,6 @@ class retrieve_SOC:
         batterij['current_SOC'] = self.random_soc
         batterij['aansluiting ruimte'] = batterij['PiekAansluiting_main'] - (batterij['PiekAansluiting_main']*0.7)
         batterij.reset_index(inplace=True, drop=True)
+        batterij = batterij[batterij['Availability'] == 'Yes']
         print('get SOC', batterij.to_string())
         return batterij

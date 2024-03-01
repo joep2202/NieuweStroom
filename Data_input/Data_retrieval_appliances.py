@@ -1,7 +1,8 @@
 import pandas as pd
 
 class data_retrieval_appliances:
-    def __init__(self):
+    def __init__(self, current_interval):
+        self.current_interval = current_interval
         #create dicts to store information from appliances per type of appliance
         pd.options.mode.chained_assignment = None  # default='warn'
         self.batterij_unique = {}
@@ -42,10 +43,12 @@ class data_retrieval_appliances:
 
     def time_to_interval(self, time_str):
         if pd.isna(time_str):
-            return 0
+            return self.current_interval
         hours, minutes = map(int, time_str.split(':'))
         total_minutes = hours * 60 + minutes
         interval = total_minutes // 15
+        if interval < self.current_interval:
+            return self.current_interval
         return interval
 
     #per type of appliance filter out non relevant information so the size of the df is decreased and logical

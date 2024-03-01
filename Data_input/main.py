@@ -9,7 +9,7 @@ import pandas as pd
 #import libraries
 from datetime import datetime
 
-timestamp= 20231220                                #select the data for which the code runs
+timestamp= 20231207                               #select the data for which the code runs
 current_interval = 0                                    #select interval from which the code runs
 
 #change dates to usable format
@@ -19,11 +19,11 @@ date = date_temp.strftime('%d/%m/%Y')
 #initialize classes
 temperature_call = retrieve_temp(timestamp=timestamp)
 import_data_base_situation = import_data_per_day()
-data_retr_appl = data_retrieval_appliances()
+data_retr_appl = data_retrieval_appliances(current_interval=current_interval)
 time_interval = time_intervals()
 
 #get the outside data
-allocation_trading, onbalanskosten, ZWC = import_data_base_situation.get_data(date)
+allocation_trading, onbalanskosten, ZWC, DA_bid = import_data_base_situation.get_data(date)
 temperature = temperature_call.change_into_15min()
 unique_types = data_retr_appl.return_unique()
 
@@ -44,30 +44,14 @@ for index, appliance in enumerate(data_retr_appl.get_all()):
     for types in unique_types:
         all_appliances[appl[index]][types].fillna(0, inplace=True)
 
-#fill the NaN with a high number because the optimizer can't handle NaN and now the become irrelevant
-#all_appliances['batterij']['Zonder opwek'].fillna(0, inplace=True)# for appliance in appl:
-
 #Initialize and run the optimizer
 time_list = {**time_list_valid['batterij']['Zonder opwek'], **time_list_valid['batterij']['Met opwek']}
 #time_list = time_list_valid['batterij']['Zonder opwek']
 appliance_list = pd.concat([all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys],all_appliances['batterij']['Met opwek'].loc[:, main_keys + bat_keys]])
 #appliance_list = all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys]
-# print(time_list)
-# print(appliance_list.to_string())
-optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=appliance_list, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], current_interval=current_interval, date=date)
+
+optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=appliance_list, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], current_interval=current_interval, DA_bid=DA_bid,date=date)
 optimizer_imbalance.run(time_list_valid=time_list)
-
-#     print(time_list_valid[appliance])
-#     for types in unique_types:
-#         print(len(time_list_valid[appliance][types]))
-#     print(all_appliances['batterij']['Met opwek'].to_string())
-#     print(all_appliances['batterij']['Zonder opwek'].to_string())
-
-#print(all_appliances['batterij']['Met opwek'].to_string())
-
-#print(all_appliances['batterij']['Met opwek'].loc[:, main_keys + bat_keys].to_string())
-#batterij = all_appliances['batterij']['Met opwek'].loc[:, main_keys + bat_keys]
-#print(batterij.to_string())
 
 
 

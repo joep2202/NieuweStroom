@@ -6,8 +6,10 @@ class import_data_per_day:
         self.allocatie_trading = pd.read_csv('data/DecemberDataAlloTrading.csv')
         self.onbalanskosten = pd.read_csv('data/DecemberDataOnbalanskosten.csv')
         self.ZWC = pd.read_csv('data/DecemberDataZWC.csv')
+        self.DA_bid = pd.read_csv('data/e_prog_dec.csv')
         # List to select necessary data from csv
         self.allocatie_trading_columns = ['From_NL','Total_Allocation_MWh_both_tenants','Imbalance_Short_EurMWh', 'Imbalance_Long_EurMWh', 'EPEX_EurMWh', 'Buy_MW', 'Sell_MW','Traded_Volume_MWh', 'Price_Eur']
+        self.DA_bid_columns = ['From_NL', 'Abs_E_Volume_MWh_both_tenants']
 
     def get_data(self, day):
         #Get right data for allocation and trading
@@ -19,6 +21,16 @@ class import_data_per_day:
         self.tenant_1_allocatie.reset_index(inplace=True, drop= True)
         self.allocatie_trading['Total_Allocation_MWh_both_tenants'] = self.allocatie_trading['Total_Allocation_MWh'] + self.tenant_1_allocatie['Total_Allocation_MWh']
         self.allocatie_trading = self.allocatie_trading.filter(self.allocatie_trading_columns)
+
+        #Get right data for DA BID
+        self.DA_bid = self.DA_bid[self.DA_bid['From_NL'].str.contains(day)]
+        self.tenant_1_DA_bid = self.DA_bid[self.DA_bid['Tenant'] == 1]
+        self.DA_bid = self.DA_bid[self.DA_bid['Tenant'] == 0]
+        self.DA_bid = self.DA_bid.fillna(0)
+        self.DA_bid.reset_index(inplace=True, drop=True)
+        self.tenant_1_DA_bid.reset_index(inplace=True, drop=True)
+        self.DA_bid['Abs_E_Volume_MWh_both_tenants'] = self.DA_bid['Abs_E_Volume_MWh'] + self.tenant_1_DA_bid['Abs_E_Volume_MWh']
+        self.DA_bid = self.DA_bid.filter(self.DA_bid_columns)
 
         # Get right data for onbalanskosten
         self.onbalanskosten = self.onbalanskosten[self.onbalanskosten['datum'].str.contains(day)]
@@ -47,4 +59,4 @@ class import_data_per_day:
         self.ZWC_final['Forecast_consumption'] = self.consumption['Sum_forecast']
         self.ZWC_final['Allocation_consumption'] = self.consumption['Sum_allocatie']
 
-        return self.allocatie_trading, self.onbalanskosten, self.ZWC_final
+        return self.allocatie_trading, self.onbalanskosten, self.ZWC_final, self.DA_bid
