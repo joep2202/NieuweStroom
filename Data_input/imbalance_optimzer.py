@@ -15,7 +15,7 @@ class optimizer:
         self.current_interval = current_interval
         # initialize model
         self.batterij = batterij
-        #self.batterij = self.batterij.iloc[0:5]
+        self.batterij = self.batterij.iloc[0:5]
         self.batterij = self.retrieve_SOC_battery.get_SOC_battery(self.batterij)
         self.keys = self.batterij['appl_id_main'].to_list()
         self.model_imbalance = model(self.model, allocation_trading=allocation_trading, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature, current_interval=self.current_interval, DA_bid=DA_bid)

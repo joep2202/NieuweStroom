@@ -46,61 +46,16 @@ class model:
     def variable(self, batterij):
         self.batterij = batterij
 
-        #Imbalance costs variables
-        self.model.imbalance_costs_before_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.imbalance_costs_before_flex_total = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.imbalance_costs_before_flex_epex = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.imbalance_costs_after_flex_total = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.imbalance_costs_after_flex_epex = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.imbalance_costs_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.imbalance_costs_before_flex_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.imbalance_costs_before_flex_total_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.imbalance_costs_before_flex_epex_comp = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.onvermijdbaar_imbalance = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.onvermijdbaar_imbalance_totaal = pyomo.Var(self.model.Time, within=pyomo.Any)
-
         #imbalance prices
         self.model.imbalance_afregelen = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.imbalance_opregelen = pyomo.Var(self.model.Time, within=pyomo.Any)
-
-        self.model.used_price = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.used_price_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.used_price_onvermijdbaar = pyomo.Var(self.model.Time, within=pyomo.Any)
 
         # Select boolean to select the right imbalance price
         self.model.range_options_onbalans = pyomo.Set(initialize=range(self.onbalanskosten.shape[1] - 1))
         self.model.boolean_select_imbalance = pyomo.Var(self.model.Time, self.model.range_options_onbalans,within=pyomo.Binary)
 
-        #onbalans volumes variables
-        self.model.difference_MWh_afregelen = pyomo.Var(self.model.Time,bounds=(-100,100), within=pyomo.NonNegativeReals)
-        self.model.difference_MWh_opregelen = pyomo.Var(self.model.Time,bounds=(-100,100), within=pyomo.NonNegativeReals)
-        self.model.difference_MWh_plot = pyomo.Var(self.model.Time,bounds=(-100,100), within=pyomo.Reals)
-        self.model.boolean_difference_afregelen = pyomo.Var(self.model.Time, within=pyomo.Binary)
-        self.model.boolean_difference_opregelen = pyomo.Var(self.model.Time, within=pyomo.Binary)
-        self.model.difference_MWh_afregelen_comp = pyomo.Var(self.model.Time, bounds=(-100, 100),within=pyomo.NonNegativeReals)
-        self.model.difference_MWh_opregelen_comp = pyomo.Var(self.model.Time, bounds=(-100, 100),within=pyomo.NonNegativeReals)
-        self.model.difference_MWh_plot_comp = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
-        self.model.boolean_difference_afregelen_comp = pyomo.Var(self.model.Time, within=pyomo.Binary)
-        self.model.boolean_difference_opregelen_comp = pyomo.Var(self.model.Time, within=pyomo.Binary)
-        self.model.difference_MWh_afregelen_onvermijdbaar = pyomo.Var(self.model.Time, bounds=(-100, 100),within=pyomo.NonNegativeReals)
-        self.model.difference_MWh_opregelen_onvermijdbaar = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.NonNegativeReals)
-        self.model.difference_MWh_plot_onvermijdbaar = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
-        self.model.boolean_difference_afregelen_onvermijdbaar = pyomo.Var(self.model.Time, within=pyomo.Binary)
-        self.model.boolean_difference_opregelen_onvermijdbaar = pyomo.Var(self.model.Time, within=pyomo.Binary)
-        self.model.difference_MWh_afregelen_after_flex = pyomo.Var(self.model.Time, bounds=(-100, 100),within=pyomo.NonNegativeReals)
-        self.model.difference_MWh_opregelen_after_flex = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.NonNegativeReals)
-        self.model.difference_MWh_plot_after_flex = pyomo.Var(self.model.Time, bounds=(-100, 100), within=pyomo.Reals)
-        self.model.boolean_difference_afregelen_after_flex = pyomo.Var(self.model.Time, within=pyomo.Binary)
-        self.model.boolean_difference_opregelen_after_flex = pyomo.Var(self.model.Time, within=pyomo.Binary)
-
-        #allocatie forecasts and actuals
+        # #allocatie forecasts and actuals
         self.model.total_forecast = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.total_forecast_hour_e_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.total_forecast_hour_v_programma = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.total_forecast_weather = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.total_forecast_hour_weather = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.total_allocation_hour = pyomo.Var(self.model.Time, within=pyomo.Any)
-        self.model.totaal_allocatie_after_flex = pyomo.Var(self.model.Time, within=pyomo.Any)
 
 
         # #0 is DA_bid (E) #1 is V_program #2 onvermijdbaar #3 weather
