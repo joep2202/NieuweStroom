@@ -1,0 +1,75 @@
+,Tenant,ContractGeactiveerd,TypeContract,Bedrijfsnaam,e-mail,Plaats,Aanduiding,DatumLeveringEinde,JaarVerbruik,Meetmethode,TypeNota,MetertypeOmschrijving,soort,Type Levering,SupplyType
+0,NieuweStroom,Ja,FullFlex,K19 Art Surroundings BV,administratie@k-19.nl,EINDHOVEN,GV,0,95262,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+1,NieuweStroom,Ja,FullFlex,Bebo Parket B.V,info@beboparket.nl,VRIEZENVEEN,GV,0,96225,2 - maandelijks bemeten zie de tabel GVMeterStanden uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,L - Levering,Consumption
+2,NieuweStroom,Ja,FullFlex,Vis en Vos V.O.F.,marskramer-intertoys@planet.nl,NUNSPEET,GV,0,73687,2 - maandelijks bemeten zie de tabel GVMeterStanden uit de MeetDatadb,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+3,NieuweStroom,Ja,FullFlex,Leo van Schaijik Osnabrugge B.V.,r.schaminee@elektrowarenhuis.nl,CUIJCK,GV,0,97307,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+4,NieuweStroom,Ja,FullFlex,HAKA Vlees B.V.,administratie@kossevlees.nl,OMMEN,GV,0,283263,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,L - Levering,Consumption
+5,NieuweStroom,Ja,FullFlex,ESVE Spuiterij BV,info@eeftink-rensing.nl,LICHTENVOORDE,GV,0,277335,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,L - Levering,Consumption
+6,NieuweStroom,Ja,FullFlex,Boer Staphorst B.V.,info@boer-staphorst.nl,STAPHORST,GV,0,138652,2 - maandelijks bemeten zie de tabel GVMeterStanden uit de MeetDatadb,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+7,NieuweStroom,Ja,FullFlex,Vorselaars  Vruchtensappen en Frisdranken BV,inkoop@vorselaars.nl,TILBURG,GV,0,392949,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,L - Levering,Consumption
+8,NieuweStroom,Ja,FullFlex,An de leiding B.V.,andeleiding@gmail.com,WITHAREN,GV,0,74000,2 - maandelijks bemeten zie de tabel GVMeterStanden uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,L - Levering,Consumption
+9,NieuweStroom,Ja,FullFlex,VVE Marco Pololaan,info@vvepartner.nl,ENSCHEDE,KV,0,12505,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,L - Levering,Consumption
+10,NieuweStroom,Ja,FullFlex,Autoservice Benelite B.V.,administratie@benelite.nl,Hoofddorp,KV,0,21195,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,L - Levering,Consumption
+11,NieuweStroom,Ja,FullFlex,VvE Rubenslaan IV,claudia@jwabeheer.nl,NIEUWEGEIN,KV,0,536,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,L - Levering,Consumption
+12,NieuweStroom,Ja,FullFlex,Zuijl en Weerd Holding B.V.,Ed@zuijlenweerd.nl,HARMELEN,KV,0,4960,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,L - Levering,Consumption
+13,NieuweStroom,Ja,FullFlex,V.O.F. Pennartz,lpennartz@ziggo.nl,LANDGRAAF,KV,0,71520,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,L - Levering,Consumption
+14,NieuweStroom,Ja,FullFlex,P.P.P. v. Esch h/o Brood Express Zuidplein,Facturenzuidplein@ladage.nl,BERKEL EN RODENRIJS,KV,0,20795,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,L - Levering,Consumption
+15,NieuweStroom,Ja,FullFlex,Van den Berg Surf B.V.,administratie@vandenbergsurf.nl,HOORN NH,KV,0,36845,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,L - Levering,Consumption
+16,NieuweStroom,Ja,FullFlex,Projektro Vastgoed BV,info@vanrouwendaalgroep.nl,ARNHEM,KV,0,300,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,L - Levering,Consumption
+17,NieuweStroom,Ja,FullFlex,Aardappelhandel het Aardappelpakhuis B.V.,peter@aardappelhandel.nl,'S-GRAVENDEEL,KV,0,20421,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,L - Levering,Consumption
+18,NieuweStroom,Ja,Voorleveren,Kloek B.V.,kloekutrecht@gmail.com,UTRECHT,KV,0,43034,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+19,NieuweStroom,Ja,Voorleveren,Patisserie Elzo Prenger,Steve@elzoprenger.nl,AMSTELVEEN,KV,0,56280,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+20,NieuweStroom,Ja,Voorleveren,Bowling Waalwijk B.V. 't Bourgondisch Hof,Gjalt@bourgondischhof.nl,WAALWIJK,KV,0,3845,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+21,NieuweStroom,Ja,Voorleveren,J. van Geenhuizen jr. Beheer B.V.,mylenemuller@casema.nl,VEENENDAAL,KV,0,116720,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+22,NieuweStroom,Ja,Voorleveren,J.P.M. Tax Melkveebedrijf de Heumenschehof V.O.F. ,jtfarm@kpnmail.nl,HEUMEN,KV,0,69351,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+23,NieuweStroom,Ja,Voorleveren,Carina Geers - van Kasteel,specialdesign01@gmail.com,SWIFTERBANT,KV,0,6740,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+24,NieuweStroom,Ja,Voorleveren,Special Colors Paintshop B.V.,info@specialcolorspaintshop.com,DRONTEN,KV,0,20505,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+25,NieuweStroom,Ja,Voorleveren,Marlies Otten thodn Bagels en Beans van Broeckhuys,marlies@bagelsbeans.nl,NIJMEGEN,KV,0,36000,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+26,NieuweStroom,Ja,Voorleveren,Dunkin Lijnbaan Rotterdam,finance@dunkindonuts.nl,ROTTERDAM,KV,0,58305,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,Consumption
+27,NieuweStroom,Ja,FullFlex,Mts. R.T.B. van Bunderen en J.A. van Bunderen-de B,jvanbunderen@xs4all.nl,WIERINGERWERF,GV,0,1000,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+28,NieuweStroom,Ja,FullFlex,KWF KANKERBESTRIJDING,cverwijst@kwf.nl,AMSTERDAM,GV,0,130306,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+29,NieuweStroom,Ja,FullFlex,Pluimveebedrijf Morsink VOF,jmorsink@kliksafe.nl,ENTER,GV,0,68340,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+30,NieuweStroom,Ja,FullFlex,VOF J. Sprenkeling en Zn,joep.sprenkeling@hetnet.nl,LIMMEN,GV,0,119109,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+31,NieuweStroom,Ja,FullFlex,Stichting Zalencentrum De Brug,robertjandewijn@gmail.com,REEUWIJK,GV,0,26000,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+32,NieuweStroom,Ja,FullFlex,Marcel Segers B.V.,admin@segerstransport.nl,OOSTERHOUT,GV,0,52867,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+33,NieuweStroom,Ja,FullFlex,Bouwbedrijf Baten BV,info@batenbouw.nl,GELDROP,GV,0,36072,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+34,NieuweStroom,Ja,FullFlex,SHS Bosma,erikbosma8@hotmail.com,NIEHOVE,GV,0,1000,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+35,NieuweStroom,Ja,FullFlex,Lobo,info@loboholthees.nl,HOLTHEES,GV,0,50804,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+36,NieuweStroom,Ja,FullFlex,Van Rooijen Hekwerken,facturen@vanrooijenhekwerken.nl,VOORHOUT,KV,0,22740,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,C - Levering/Teruglevering,Prosumption
+37,NieuweStroom,Ja,FullFlex,Autobedrijf Nico Bruggink B.V.,joke@bruggink.nl,BORCULO,KV,0,16030,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,C - Levering/Teruglevering,Prosumption
+38,NieuweStroom,Ja,FullFlex,VOF Nertsfokkerij Groen,Groencornelis@gmail.com,BOELENSLAAN,KV,0,0,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,C - Levering/Teruglevering,Prosumption
+39,NieuweStroom,Ja,FullFlex,Bioscooponderneming Abeln,frans@astrabioscopen.nl,KLAZIENAVEEN,KV,0,32095,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,C - Levering/Teruglevering,Prosumption
+40,NieuweStroom,Ja,FullFlex,Dhr. R.M. Zegers,zegers105@zonnet.nl,DE KOOG,KV,0,4741,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,C - Levering/Teruglevering,Prosumption
+41,NieuweStroom,Ja,FullFlex,Kees Broersen Zaden B.V. kbz broersen,info@kbz.nl,TUITJENHORN,KV,0,9145,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,C - Levering/Teruglevering,Prosumption
+42,NieuweStroom,Ja,FullFlex,Poultryshop 24 B.V.,williamphilips@live.nl,Hunsel,KV,0,0,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,C - Levering/Teruglevering,Prosumption
+43,NieuweStroom,Ja,FullFlex,Rosier Greidanus,info@rosiergreidanus.nl,WINSUM FR,KV,0,14945,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,C - Levering/Teruglevering,Prosumption
+44,NieuweStroom,Ja,FullFlex,O.A.P.M. Dobbe,Onno-dobbe@kpnmail.nl,TER AAR,KV,0,64945,1 - jaarlijks bemeten,2 - Jaar,3 - Slimme meter,ELEK,C - Levering/Teruglevering,Prosumption
+45,NieuweStroom,Ja,Voorleveren,De Kruijf Tenten B.V.,jan@dekruijftenten.nl,SCHALKWIJK,KV,0,19245,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+46,NieuweStroom,Ja,Voorleveren,H.G.M.,henk@henksmit.nl,LIMMEN,KV,0,19433,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+47,NieuweStroom,Ja,Voorleveren,R. van t Klooster,bigronhdcl@gmail.com,LOOSDRECHT,KV,0,2508,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+48,NieuweStroom,Ja,Voorleveren,CJJ Ruijter,cees@methartenziel.org,BREEZAND,KV,0,2598,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+49,NieuweStroom,Ja,Voorleveren,Amy van Dam,amy_vandam@hotmail.com,OUDEWATER,KV,0,370,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+50,NieuweStroom,Ja,Voorleveren,Tom Lehmann,info@Lehmannautomotive.nl,DOORWERTH,KV,0,7800,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+51,NieuweStroom,Ja,Voorleveren,Van Westreenen B.V.,secretariaat@vanwestreenen.nl,LUNTEREN,KV,0,1000,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+52,NieuweStroom,Ja,Voorleveren,Mts Verweij Bed and Breakfast,info@natuurcampingdeboerderij.nl,SNELERWAARD,KV,0,56865,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+53,NieuweStroom,Ja,Voorleveren,A.C. den Dekker,ariedendekker@me.com,VEEN,KV,0,10900,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,Prosumption
+395,NieuweStroom,Ja,Voorleveren,Agricult B.V.,adriaan.vd.ven@agricult.nl,SON EN BREUGEL,KV,0,30000,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,
+396,NieuweStroom,Ja,Voorleveren,N.T. Groen,nicogroenverhuur@kpnmail.nl,'T VELD,KV,0,9000,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,
+397,NieuweStroom,Ja,Voorleveren,Praedium OB B.V.,hans.dijks@dhbc.nl,OTTERLO,KV,0,49240,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,
+398,NieuweStroom,Ja,Voorleveren,Van Kessel Holding B.V.,d.vankessel@vankesselholdingbv.nl,GELDERMALSEN,KV,0,0,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,
+399,NieuweStroom,Ja,Voorleveren,H.M. Bleeker,p.nieman@telfort.nl,Sint Maarten,KV,0,3300,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,
+262,NieuweStroom,Ja,FullFlex,FLS Company Nederland N.V. | Fl?gel Nederland,remco@flugel.com,CAPELLE AAN DEN IJSSEL,GV,0,62306,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,2 - Jaar,0 - Domme meter,ELEK,C - Levering/Teruglevering,
+263,NieuweStroom,Ja,FullFlex,GP Bedrijfshuisvesting,gpbedrijfshuisvesting@gmail.com,GRONINGEN,GV,0,16017,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,
+264,NieuweStroom,Ja,FullFlex,WBoonstra BV.,boonstraagrobv@gmail.com,REDUZUM,GV,0,7200,2 - maandelijks bemeten zie de tabel GVMeterStanden uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,
+265,NieuweStroom,Ja,FullFlex,Hoeve Vredeveld,jangroot@hoevevredeveld.nl,LELYSTAD,GV,0,91641,2 - maandelijks bemeten zie de tabel GVMeterStanden uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,
+266,NieuweStroom,Ja,FullFlex,Regulateurs Europa B.V.,gertjan.mulder@regulateurs-europa.com,RODEN,GV,0,112266,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,C - Levering/Teruglevering,
+195,NieuweStroom,Ja,Voorleveren,Logistiek Centrum Stad Alkmaar BV,Maarten.dolfsma@stadalkmaar.nl,ALKMAAR,KV,0,340,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,
+196,NieuweStroom,Ja,Voorleveren,Bibitor Fonds II B.V.,l.vernooij@bibitor.nl,HAAREN,KV,0,8000,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,
+197,NieuweStroom,Ja,Voorleveren,heer A de Fijter,arie.defijter@gmail.com,ROTTERDAM,KV,0,1085,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,
+198,NieuweStroom,Ja,Voorleveren,D.J. Marees,nthoes@marees.nl,ALKMAAR,KV,0,1605,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,
+199,NieuweStroom,Ja,Voorleveren,Fa. Van der Haas,info@jvanderhaas.nl,DE WAAL,KV,0,4300,1 - jaarlijks bemeten,2 - Jaar,0 - Domme meter,ELEK,L - Levering,
+59,NieuweStroom,Ja,FullFlex,Witoma Caravan B.V,receptie@witoma.nl,ROSMALEN,GV,0,45325,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,2 - Jaar,0 - Domme meter,ELEK,L - Levering,
+60,NieuweStroom,Ja,FullFlex,Jordan MLU,rvanoostenbrugge@jordanmlu.nl,ZEIST,GV,0,170649,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,L - Levering,
+61,NieuweStroom,Ja,FullFlex,JP van den Bent stichting,secretariaat@jpvandenbent.nl,DEVENTER,GV,0,82509,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,L - Levering,
+62,NieuweStroom,Ja,FullFlex,La Galleria Boulevard,crediteuren@entrada-restaurants.nl,'S-GRAVENHAGE,GV,0,134124,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,2 - Jaar,0 - Domme meter,ELEK,L - Levering,
+63,NieuweStroom,Ja,FullFlex,Sun-Power Agro Uitzendbureau B.V.,twan@sun-power.nl,TIENRAY,GV,0,171872,8 - telemetrie zie tabel GVDataSets en GV96DataSets uit de MeetDatadb,1 - Maand,0 - Domme meter,ELEK,L - Levering,

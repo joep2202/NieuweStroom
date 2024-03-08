@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+numpy = "*"
+pandas = "*"
+matplotlib = "*"
+pyomo = "*"
+requests = "*"
+netcdf4 = "*"
+xarray = "*"
+mplcursors = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
