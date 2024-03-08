@@ -10,20 +10,22 @@ import pandas as pd
 from datetime import datetime
 
 timestamp= 20231207                               #select the data for which the code runs
-current_interval = 0                                    #select interval from which the code runs
+current_interval = 15                                  #select interval from which the code runs
+length_forecast = 18*4
 
 #change dates to usable format
 date_temp = datetime.strptime(str(timestamp), '%Y%m%d')
 date = date_temp.strftime('%d/%m/%Y')
 
 #initialize classes
-temperature_call = retrieve_temp(timestamp=timestamp)
 import_data_base_situation = import_data_per_day()
-data_retr_appl = data_retrieval_appliances(current_interval=current_interval)
-time_interval = time_intervals()
+timestamp_hour = import_data_base_situation.interval_to_time(current_interval)
+temperature_call = retrieve_temp(timestamp=timestamp, current_interval=current_interval, length_forecast=length_forecast, timestamp_hour=timestamp_hour)
+data_retr_appl = data_retrieval_appliances(current_interval=current_interval, length_forecast=length_forecast)
+time_interval = time_intervals(current_interval=current_interval, timestamp=date_temp, timestamp_hour=timestamp_hour, length_forecast=length_forecast)
 
 #get the outside data
-allocation_trading, onbalanskosten, ZWC, DA_bid = import_data_base_situation.get_data(date)
+allocation_trading, onbalanskosten, ZWC, DA_bid = import_data_base_situation.get_data(day=date, current_interval=current_interval, length_forecast=length_forecast)
 temperature = temperature_call.change_into_15min()
 unique_types = data_retr_appl.return_unique()
 
@@ -33,7 +35,7 @@ all_appliances = {}
 #Create lists to select the relevant data needed for the optimizer
 appl = ['batterij', 'EVlaadpaal', 'AC', 'KC', 'WP_buf', 'WP_no_buf', 'WWB', 'overig']
 main_keys = ['appl_id_main','PiekAansluiting_main', 'type_flex_main']
-bat_keys = ['charge_KW_bat','size_kWh_bat','SOC_eind_1_bat','end_time_bat_PTE', 'SOC_eind_2_bat','end_time2_bat_PTE', 'ICT_APPL_bat']
+bat_keys = ['charge_KW_bat','size_kWh_bat','SOC_eind_1_bat','start_time_PTE_bat','end_time_PTE_bat', 'SOC_eind_2_bat','start_time_PTE2_bat','end_time_PTE2_bat', 'ICT_APPL_bat']
 
 
 #retrieve the data per appliance and create a list per appliance when flex is available
@@ -50,7 +52,7 @@ time_list = {**time_list_valid['batterij']['Zonder opwek'], **time_list_valid['b
 appliance_list = pd.concat([all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys],all_appliances['batterij']['Met opwek'].loc[:, main_keys + bat_keys]])
 #appliance_list = all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys]
 
-optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=appliance_list, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], current_interval=current_interval, DA_bid=DA_bid,date=date)
+optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=appliance_list, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], current_interval=current_interval, DA_bid=DA_bid,date=date, length_forecast=length_forecast)
 optimizer_imbalance.run(time_list_valid=time_list)
 
 

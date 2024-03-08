@@ -1,11 +1,14 @@
 import pandas as pd
 
 class data_retrieval_appliances:
-    def __init__(self, current_interval):
+    def __init__(self, current_interval, length_forecast):
         self.current_interval = current_interval
+        self.length_forecast = length_forecast
         #create dicts to store information from appliances per type of appliance
         pd.options.mode.chained_assignment = None  # default='warn'
         self.batterij_unique = {}
+        self.interval_start = {}
+        self.interval_start_2 = {}
         self.interval_end = {}
         self.interval_end_2 = {}
         self.EV_unique = {}
@@ -43,13 +46,16 @@ class data_retrieval_appliances:
 
     def time_to_interval(self, time_str):
         if pd.isna(time_str):
-            return self.current_interval
+            return 0
         hours, minutes = map(int, time_str.split(':'))
         total_minutes = hours * 60 + minutes
         interval = total_minutes // 15
-        if interval < self.current_interval:
-            return self.current_interval
-        return interval
+        if interval-self.current_interval < self.length_forecast:
+            if interval < self.current_interval:
+                return self.length_forecast-(self.current_interval-interval)
+            return (interval-self.current_interval)
+        else:
+            return 0
 
     #per type of appliance filter out non relevant information so the size of the df is decreased and logical
     def batterij(self):
@@ -57,10 +63,14 @@ class data_retrieval_appliances:
         batterij = batterij.loc[:, self.main_keys + self.bat_keys]
         for type in self.unique_type_flex:
             self.batterij_unique[type] = batterij[batterij['type_flex_main'] == type]
+            self.interval_start[type] = self.batterij_unique[type]['start_time_bat'].apply(self.time_to_interval)
+            self.interval_start_2[type] = self.batterij_unique[type]['start_time2_bat'].apply(self.time_to_interval)
             self.interval_end[type] = self.batterij_unique[type]['end_time_bat'].apply(self.time_to_interval)
             self.interval_end_2[type] = self.batterij_unique[type]['end_time2_bat'].apply(self.time_to_interval)
-            self.batterij_unique[type].loc[:,'end_time_bat_PTE'] = self.interval_end[type]
-            self.batterij_unique[type].loc[:, 'end_time2_bat_PTE'] = self.interval_end_2[type]
+            self.batterij_unique[type].loc[:, 'start_time_PTE_bat'] = self.interval_start[type]
+            self.batterij_unique[type].loc[:,'end_time_PTE_bat'] = self.interval_end[type]
+            self.batterij_unique[type].loc[:, 'start_time_PTE2_bat'] = self.interval_start_2[type]
+            self.batterij_unique[type].loc[:, 'end_time_PTE2_bat'] = self.interval_end_2[type]
         return self.batterij_unique
 
     def EVlaadpaal(self):

@@ -9,18 +9,18 @@ class model:
         self.onbalanskosten = onbalanskosten
         self.current_interval = current_interval
         # Get the right data into the variables
-        self.epex = self.allocation_trading['EPEX_EurMWh'][current_interval:]
-        self.temperature_actual = temperature[current_interval:]
-        self.solar_forecast = self.ZWC['Forecast_solar'][current_interval:]
-        self.solar_actual = self.ZWC['Allocation_solar'][current_interval:]
-        self.wind_forecast = self.ZWC['Forecast_wind'][current_interval:]
-        self.wind_actual = self.ZWC['Allocation_wind'][current_interval:]
-        self.consumption_forecast = self.ZWC['Forecast_consumption'][current_interval:]
-        self.consumption_actual = self.ZWC['Allocation_consumption'][current_interval:]
-        self.trading_volume = self.allocation_trading['Traded_Volume_MWh'][current_interval:]
+        self.epex = self.allocation_trading['EPEX_EurMWh']
+        self.temperature_actual = temperature
+        self.solar_forecast = self.ZWC['Forecast_solar']
+        self.solar_actual = self.ZWC['Allocation_solar']
+        self.wind_forecast = self.ZWC['Forecast_wind']
+        self.wind_actual = self.ZWC['Allocation_wind']
+        self.consumption_forecast = self.ZWC['Forecast_consumption']
+        self.consumption_actual = self.ZWC['Allocation_consumption']
+        self.trading_volume = self.allocation_trading['Traded_Volume_MWh']
         # In een forecaster wordt totaal_allocatie vervangen door de verwachte positie
-        self.totaal_allocatie = self.allocation_trading['Total_Allocation_MWh_both_tenants'][current_interval:]
-        self.DA_bid = DA_bid['Abs_E_Volume_MWh_both_tenants'][current_interval:]
+        self.totaal_allocatie = self.allocation_trading['Total_Allocation_MWh_both_tenants']
+        self.DA_bid = DA_bid['Abs_E_Volume_MWh_both_tenants']
         # Drop some of the onbalans columns
         columns_to_drop = ['datum', 'PTE', 'periode_van', 'periode_tm', 'indicatie noodvermogen op', 'indicatie noodvermogen af', 'prikkelcomponent']
         self.onbalanskosten = self.onbalanskosten.drop(columns=columns_to_drop)
@@ -39,6 +39,7 @@ class model:
         self.time_list_valid = time_list_valid
         self.keys = keys
         self.time_list_valid = {key: self.time_list_valid[key] for key in self.keys}
+        print(self.time_list_valid)
         self.variable(batterij=self.batterij)
         self.parameters(batterij=self.batterij, time_list_valid=self.time_list_valid)
         self.constraints()
@@ -118,6 +119,7 @@ class model:
 
         self.temp_actual_dict = {}
         for index, value in self.temperature_actual.items():
+            #print(index, value)
             self.temp_actual_dict[index] = value
         self.model.temp_actual = pyomo.Param(self.model.Time, initialize=self.temp_actual_dict)
 
@@ -210,9 +212,9 @@ class model:
         ## Battery constraints
         def battery_SOC(model, t, x):
             if t == 0:
-                return model.batterij_SOC[t,x] == model.info_batterij[11,x] * model.info_batterij[4,x]
+                return model.batterij_SOC[t,x] == model.info_batterij[13,x] * model.info_batterij[4,x]
             elif t == self.current_interval:
-                return model.batterij_SOC[t,x] == model.info_batterij[11,x] * model.info_batterij[4,x]
+                return model.batterij_SOC[t,x] == model.info_batterij[13,x] * model.info_batterij[4,x]
             else:
                 return model.batterij_SOC[t,x] == model.batterij_SOC[t-1,x] + ((model.batterij_powerCharge_final[t,x] + model.batterij_powerDischarge_final[t,x])/4)
         self.model.battery_SOC = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC)
@@ -290,11 +292,11 @@ class model:
 
         ## assure it adheres the moment it needs to be at the final SOC to not limit users
         def battery_SOC_notservedfactor_high(model, t, x, z):
-            return model.batterij_energyNotServedFactor_higher[t,x,z] == ((model.batterij_SOC[t,x]-(model.info_batterij[4,x]*model.info_batterij[5+(z*2),x])) * model.batterij_energyNotServedFactor_higher_boolean[t,x,z])
+            return model.batterij_energyNotServedFactor_higher[t,x,z] == ((model.batterij_SOC[t,x]-(model.info_batterij[4,x]*model.info_batterij[5+(z*3),x])) * model.batterij_energyNotServedFactor_higher_boolean[t,x,z])
         self.model.battery_SOC_notservedfactor_high = pyomo.Constraint(self.model.Time, self.model.number_batteries,self.model.number_timeslots, rule=battery_SOC_notservedfactor_high)
 
         def battery_SOC_notservedfactor_low(model, t, x, z):
-            return model.batterij_energyNotServedFactor_below[t,x,z] == (((model.info_batterij[4,x]*model.info_batterij[5+(z*2),x])-model.batterij_SOC[t,x]) * model.batterij_energyNotServedFactor_below_boolean[t,x,z])
+            return model.batterij_energyNotServedFactor_below[t,x,z] == (((model.info_batterij[4,x]*model.info_batterij[5+(z*3),x])-model.batterij_SOC[t,x]) * model.batterij_energyNotServedFactor_below_boolean[t,x,z])
         self.model.battery_SOC_notservedfactor_low = pyomo.Constraint(self.model.Time, self.model.number_batteries,self.model.number_timeslots, rule=battery_SOC_notservedfactor_low)
 
         def battery_SOC_notservedfactor(model, t, x,z):

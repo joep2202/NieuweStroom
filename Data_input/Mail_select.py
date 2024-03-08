@@ -20,7 +20,7 @@ data = data.fillna(0)
 data = data[data['DatumLeveringEinde'] == 0]
 #print(data)
 data_sep = {}
-aantal_mailadressen = 80
+aantal_mailadressen = 90
 #print(data)
 already_used = pd.read_csv('data/50_mail_list.csv')
 
@@ -48,7 +48,7 @@ save_correct = [data_sep['ConsumptionGV0 - Domme meter'][0:aantal_mailadressen],
 final_mail_list = pd.concat([save_correct[x] for x, value in enumerate(save_correct)], axis=0)
 final_mail_list.reset_index(inplace=True, drop=True)
 #print(save_correct)
-#print(final_mail_list.to_string())
-#final_mail_list.to_csv('data/final2_mail_list.csv', index=True)
+print(final_mail_list.to_string())
+final_mail_list.to_csv('data/500_mail_list.csv', index=True)
 #print(data_sep)
 #print(data_Consumption.to_string())

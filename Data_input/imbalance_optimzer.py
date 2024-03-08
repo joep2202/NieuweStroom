@@ -8,8 +8,9 @@ from activation_protocol import activation_appliances
 from retrieve_current_state import retrieve_SOC
 
 class optimizer:
-    def __init__(self, allocation_trading, batterij, onbalanskosten, ZWC, temperature, current_interval,DA_bid, date):
-        self.horizon = 96
+    def __init__(self, allocation_trading, batterij, onbalanskosten, ZWC, temperature, current_interval,DA_bid, date, length_forecast):
+        self.length_forecast = length_forecast
+        self.horizon = self.length_forecast
         self.model = pyomo.ConcreteModel()
         self.retrieve_SOC_battery = retrieve_SOC()
         self.current_interval = current_interval
@@ -21,7 +22,7 @@ class optimizer:
         self.model_imbalance = model(self.model, allocation_trading=allocation_trading, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature, current_interval=self.current_interval, DA_bid=DA_bid)
         self.activate_appl = activation_appliances(batterij=self.batterij)
         self.model.horizon = self.horizon
-        self.model.Time = pyomo.RangeSet(current_interval, self.model.horizon - 1)
+        self.model.Time = pyomo.RangeSet(0, self.model.horizon - 1)
         self.solver_time_limit = 45
         self.onbalanskosten_check = pd.read_csv('data/Onbalanskosten_check.csv')
         self.onbalanskosten_check = self.onbalanskosten_check[
@@ -30,13 +31,13 @@ class optimizer:
         self.volume_check = self.volume_check[self.volume_check['From_NL'].str.contains(date)].reset_index(drop=True)
         self.price_check = pd.read_csv('data/Price plot.csv')
         self.price_check = self.price_check[self.price_check['From_NL'].str.contains(date)].reset_index(drop=True)
-        self.objective_list = ['end_time_bat_PTE', 'end_time2_bat_PTE']
+        self.objective_list = ['end_time_PTE_bat', 'end_time_PTE2_bat']
         self.check = 0
 
     # Objective function, what is the goal of the optimizer
     def ObjectiveFunction(self, model):
         return sum([model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] +\
-                    [model.imbalance_costs_total[95,1,1]])
+                    [model.imbalance_costs_total[self.length_forecast-1,1,1]])
                     #[model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] +\
                     #[model.imbalance_costs_after_flex_total[95]]) [model.batterij_powerDischarge_to_grid[t,x] for x in model.number_batteries for t in model.Time]
                    #model.batterij_powerCharge_to_grid[95,x] for x in model.number_batteries]
@@ -110,7 +111,7 @@ class optimizer:
 
         print(len(batterij_energyNotServedFactor[self.current_interval,:,0]))
         print('finalsum', sum([batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] for z in range(2) for x in range(len(batterij_energyNotServedFactor[self.current_interval,:,0]))]))
-        print('finalsum imbalance', imbalance_costs_total[95,1,1], 'old', imbalance_costs_total[95,1,0], 'difference',imbalance_costs_total[95,1,0]- imbalance_costs_total[95,1,1])
+        print('finalsum imbalance', imbalance_costs_total[self.length_forecast-1,1,1], 'old', imbalance_costs_total[self.length_forecast-1,1,0], 'difference',imbalance_costs_total[self.length_forecast-1,1,0]- imbalance_costs_total[self.length_forecast-1,1,1])
 
         #sum the charge/discharge schemes so they can be projected as 1
         batterij_powerCharge_to_grid_cum = []
@@ -123,15 +124,23 @@ class optimizer:
 
         charge = self.model.batterij_powerCharge.extract_values()
         discharge = self.model.batterij_powerDischarge.extract_values()
-        self.activate_appl.activation_protocol(charge=charge,discharge=discharge, current_interval=self.current_interval, keys=self.keys)
+        self.activate_appl.activation_protocol(charge=charge,discharge=discharge, current_interval=self.current_interval, keys=self.keys, length_forecast=self.length_forecast)
         self.activate_appl.feedback_traders(change_to_grid_cum)
 
         # X TICK LABELS
-        x = np.arange(0, 96, 8)
-        x = np.append(x, 96)
+        #x = np.arange(self.current_interval, self.length_forecast+self.current_interval, 8)
+
+        if self.current_interval == 0:
+            y=4
+        else:
+            y = self.current_interval % 4
+
+        x = np.arange(0 + (4-y), self.length_forecast+ (4-y), 8)
+        x = np.append(x, self.length_forecast+ (4-y))
         x_ticks_labels = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
+                          '20:00', '22:00', '00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
                           '20:00', '22:00', '00:00']
-        #x_ticks_labels = x_ticks_labels[int(self.current_interval / 8):]
+        x_ticks_labels = x_ticks_labels[round(self.current_interval/8):(round(self.current_interval/8)+len(x))]
 
         # plot necessary results
         fig, ax = plt.subplots(6, 1, figsize=(15, 12))
@@ -249,7 +258,7 @@ class optimizer:
         ax2[0].grid()
         ax2[0].legend()
 
-        indices = [i for i in range(self.current_interval, 96)]
+        indices = [i for i in range(0, self.length_forecast)]
         # for z in range(len(batterij_SOC[0, :])):
         #     ax2[1].plot(batterij_powerCharge[:, z], label='Charge'+str(z), color=colors[z])
         #     ax2[1].plot(batterij_powerDischarge[:, z], label='Discharge'+str(z), color=colors[z])

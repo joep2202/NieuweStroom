@@ -3,7 +3,6 @@ import pandas as pd
 class activation_appliances:
     def __init__(self, batterij):
         self.batterij = batterij
-        self.index = list(range(96))
         self.setting = {}
 
     def activation_receiver(self, ID, adress, value):
@@ -12,13 +11,13 @@ class activation_appliances:
         self.value = value
         #print(self.ID, self.adress, self.value)
 
-    def activation_protocol(self, charge, discharge, current_interval, keys):
+    def activation_protocol(self, charge, discharge, current_interval, keys, length_forecast):
         print("enter activation")
         self.keys = keys
         for index, appl in enumerate(self.keys):
             charge_list = []
             discharge_list = []
-            for time_interval in range(current_interval,96):
+            for time_interval in range(0, length_forecast):
                 charge_list.append(charge[time_interval, index])
                 discharge_list.append(discharge[time_interval, index])
             change = [x + y for x, y in zip(charge_list, discharge_list)]
