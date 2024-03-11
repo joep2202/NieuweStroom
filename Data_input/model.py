@@ -212,9 +212,7 @@ class model:
         ## Battery constraints
         def battery_SOC(model, t, x):
             if t == 0:
-                return model.batterij_SOC[t,x] == model.info_batterij[13,x] * model.info_batterij[4,x]
-            elif t == self.current_interval:
-                return model.batterij_SOC[t,x] == model.info_batterij[13,x] * model.info_batterij[4,x]
+                return model.batterij_SOC[t,x] == model.info_batterij[11,x] * model.info_batterij[4,x]
             else:
                 return model.batterij_SOC[t,x] == model.batterij_SOC[t-1,x] + ((model.batterij_powerCharge_final[t,x] + model.batterij_powerDischarge_final[t,x])/4)
         self.model.battery_SOC = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC)
@@ -230,11 +228,11 @@ class model:
 
         # If batteries are charged this is a discharge from the grid and reversed also go from kW to MWh
         def battery_charge_to_grid(model, t, x):
-            return model.batterij_powerCharge_to_grid[t,x] == ((model.batterij_powerCharge[t,x]/4)/100) *model.time_valid_batterij[t,x]
+            return model.batterij_powerCharge_to_grid[t,x] == ((model.batterij_powerCharge[t,x]/4)/1000) *model.time_valid_batterij[t,x]
         self.model.battery_charge_to_grid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_to_grid)
 
         def battery_discharge_to_grid(model, t, x):
-            return model.batterij_powerDischarge_to_grid[t,x] == (((model.batterij_powerDischarge[t,x]/4)*model.batterij_efficiency)/100) *model.time_valid_batterij[t,x]
+            return model.batterij_powerDischarge_to_grid[t,x] == (((model.batterij_powerDischarge[t,x]/4)*model.batterij_efficiency)/1000) *model.time_valid_batterij[t,x]
         self.model.battery_discharge_to_grid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_discharge_to_grid)
 
         # To prevent charging and discharging simultaneously
@@ -292,11 +290,11 @@ class model:
 
         ## assure it adheres the moment it needs to be at the final SOC to not limit users
         def battery_SOC_notservedfactor_high(model, t, x, z):
-            return model.batterij_energyNotServedFactor_higher[t,x,z] == ((model.batterij_SOC[t,x]-(model.info_batterij[4,x]*model.info_batterij[5+(z*3),x])) * model.batterij_energyNotServedFactor_higher_boolean[t,x,z])
+            return model.batterij_energyNotServedFactor_higher[t,x,z] == ((model.batterij_SOC[t,x]-(model.info_batterij[4,x]*model.info_batterij[5+(z*2),x])) * model.batterij_energyNotServedFactor_higher_boolean[t,x,z])
         self.model.battery_SOC_notservedfactor_high = pyomo.Constraint(self.model.Time, self.model.number_batteries,self.model.number_timeslots, rule=battery_SOC_notservedfactor_high)
 
         def battery_SOC_notservedfactor_low(model, t, x, z):
-            return model.batterij_energyNotServedFactor_below[t,x,z] == (((model.info_batterij[4,x]*model.info_batterij[5+(z*3),x])-model.batterij_SOC[t,x]) * model.batterij_energyNotServedFactor_below_boolean[t,x,z])
+            return model.batterij_energyNotServedFactor_below[t,x,z] == (((model.info_batterij[4,x]*model.info_batterij[5+(z*2),x])-model.batterij_SOC[t,x]) * model.batterij_energyNotServedFactor_below_boolean[t,x,z])
         self.model.battery_SOC_notservedfactor_low = pyomo.Constraint(self.model.Time, self.model.number_batteries,self.model.number_timeslots, rule=battery_SOC_notservedfactor_low)
 
         def battery_SOC_notservedfactor(model, t, x,z):
@@ -340,8 +338,6 @@ class model:
         def total_assumed_hour(model,t,y):
             if t == 0:
                 self.total_hour_variable = t
-            elif t == self.current_interval:
-                self.total_hour_variable = self.current_interval
             elif t % 4 == 0:
                 self.total_hour_variable = t
             return model.measured_line_hour[t,y] == ((model.measured_line[0+self.total_hour_variable, y] + model.measured_line[1+self.total_hour_variable,y] + model.measured_line[2+self.total_hour_variable, y] + model.measured_line[3+self.total_hour_variable, y])/4)
@@ -396,8 +392,6 @@ class model:
         def imbalance_cost_total(model,t,y,z):
             if t == 0:
                 return model.imbalance_costs_total[t,y,z] == model.imbalance_costs_epex[t,y,z]
-            elif t == self.current_interval:
-                return model.imbalance_costs_total[t,y,z] == model.imbalance_costs_epex[t,y,z] + self.last_total_imbalance
             else:
                 return model.imbalance_costs_total[t,y,z] == model.imbalance_costs_total[t - 1,y,z] + model.imbalance_costs_epex[t,y,z]
         self.model.imbalance_cost_total = pyomo.Constraint(self.model.Time,self.model.number_measured, self.model.number_of_allocations, rule=imbalance_cost_total)

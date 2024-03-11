@@ -7,10 +7,10 @@ class data_retrieval_appliances:
         #create dicts to store information from appliances per type of appliance
         pd.options.mode.chained_assignment = None  # default='warn'
         self.batterij_unique = {}
-        self.interval_start = {}
-        self.interval_start_2 = {}
-        self.interval_end = {}
-        self.interval_end_2 = {}
+        # self.interval_start = {}
+        # self.interval_start_2 = {}
+        # self.interval_end = {}
+        # self.interval_end_2 = {}
         self.EV_unique = {}
         self.AC_unique = {}
         self.KC_unique = {}
@@ -44,33 +44,45 @@ class data_retrieval_appliances:
         self.overig_keys = [names for names in self.column_names if 'overig' in names]
         return self.main_keys, self.bat_keys, self.EV_keys,self.AC_keys, self.KC_keys, self.WP_keys_buf, self.WP_keys_no_buf, self.WWB_keys, self.overig_keys
 
-    def time_to_interval(self, time_str):
+
+    def time_to_interval(self, time_str, start_time):
+        times = [time_str, start_time]
         if pd.isna(time_str):
             return 0
-        hours, minutes = map(int, time_str.split(':'))
-        total_minutes = hours * 60 + minutes
-        interval = total_minutes // 15
-        if interval-self.current_interval < self.length_forecast:
-            if interval < self.current_interval:
-                return self.length_forecast-(self.current_interval-interval)
-            return (interval-self.current_interval)
-        else:
-            return 0
+        interval =[]
+        for value in times:
+            hours, minutes = map(int, value.split(':'))
+            total_minutes = hours * 60 + minutes
+            interval.append(total_minutes // 15)
+        if interval[0] - self.current_interval < 0:
+            if (self.current_interval - interval[0]) > (96-self.length_forecast):
+                return self.length_forecast - ((self.current_interval - interval[0])-(96-self.length_forecast))
+            else:
+                return 0
+        elif interval[0] == self.current_interval:
+            if self.length_forecast == 96:
+                return self.length_forecast-1
+            else:
+                return 0
+        elif interval[0] - self.current_interval > 0:
+            if interval[0] - self.current_interval > self.length_forecast:
+                return 0
+            return interval[0]-self.current_interval
 
     #per type of appliance filter out non relevant information so the size of the df is decreased and logical
     def batterij(self):
         batterij = self.data[self.data['type_appl_main'] == 'Batterij']
         batterij = batterij.loc[:, self.main_keys + self.bat_keys]
+        #batterij = batterij.iloc[17:22]
+        #print(batterij.to_string())
         for type in self.unique_type_flex:
             self.batterij_unique[type] = batterij[batterij['type_flex_main'] == type]
-            self.interval_start[type] = self.batterij_unique[type]['start_time_bat'].apply(self.time_to_interval)
-            self.interval_start_2[type] = self.batterij_unique[type]['start_time2_bat'].apply(self.time_to_interval)
-            self.interval_end[type] = self.batterij_unique[type]['end_time_bat'].apply(self.time_to_interval)
-            self.interval_end_2[type] = self.batterij_unique[type]['end_time2_bat'].apply(self.time_to_interval)
-            self.batterij_unique[type].loc[:, 'start_time_PTE_bat'] = self.interval_start[type]
-            self.batterij_unique[type].loc[:,'end_time_PTE_bat'] = self.interval_end[type]
-            self.batterij_unique[type].loc[:, 'start_time_PTE2_bat'] = self.interval_start_2[type]
-            self.batterij_unique[type].loc[:, 'end_time_PTE2_bat'] = self.interval_end_2[type]
+            self.batterij_unique[type].reset_index(inplace=True, drop=True)
+            for index in range(len(self.batterij_unique[type])):
+                self.interval_end = self.time_to_interval(self.batterij_unique[type].loc[index,'end_time_bat'], self.batterij_unique[type].loc[index,'start_time_bat'])
+                self.interval_end_2 = self.time_to_interval(self.batterij_unique[type].loc[index,'end_time2_bat'], self.batterij_unique[type].loc[index,'start_time2_bat'])
+                self.batterij_unique[type].loc[index,'end_time_PTE_bat'] = self.interval_end
+                self.batterij_unique[type].loc[index, 'end_time_PTE2_bat'] = self.interval_end_2
         return self.batterij_unique
 
     def EVlaadpaal(self):

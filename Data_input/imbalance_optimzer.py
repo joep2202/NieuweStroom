@@ -16,7 +16,7 @@ class optimizer:
         self.current_interval = current_interval
         # initialize model
         self.batterij = batterij
-        self.batterij = self.batterij.iloc[0:5]
+        #self.batterij = self.batterij.iloc[0:5]
         self.batterij = self.retrieve_SOC_battery.get_SOC_battery(self.batterij)
         self.keys = self.batterij['appl_id_main'].to_list()
         self.model_imbalance = model(self.model, allocation_trading=allocation_trading, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature, current_interval=self.current_interval, DA_bid=DA_bid)
@@ -109,16 +109,17 @@ class optimizer:
         #         self.check += batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z]
         # print('check', self.check)
 
-        print(len(batterij_energyNotServedFactor[self.current_interval,:,0]))
-        print('finalsum', sum([batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] for z in range(2) for x in range(len(batterij_energyNotServedFactor[self.current_interval,:,0]))]))
+
+        print(len(batterij_energyNotServedFactor[0,:,0]))
+        print('finalsum', sum([batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] for z in range(2) for x in range(len(batterij_energyNotServedFactor[0,:,0]))]))
         print('finalsum imbalance', imbalance_costs_total[self.length_forecast-1,1,1], 'old', imbalance_costs_total[self.length_forecast-1,1,0], 'difference',imbalance_costs_total[self.length_forecast-1,1,0]- imbalance_costs_total[self.length_forecast-1,1,1])
 
         #sum the charge/discharge schemes so they can be projected as 1
         batterij_powerCharge_to_grid_cum = []
         batterij_powerDischarge_to_grid_cum = []
         for t in self.model.Time:
-            batterij_powerCharge_to_grid_cum.append(sum(batterij_powerCharge_to_grid[t,x] for x in range(len(batterij_energyNotServedFactor[self.current_interval,:,0]))))
-            batterij_powerDischarge_to_grid_cum.append(sum(batterij_powerDischarge_to_grid[t,x] for x in range(len(batterij_energyNotServedFactor[self.current_interval,:,0]))))
+            batterij_powerCharge_to_grid_cum.append(sum(batterij_powerCharge_to_grid[t,x] for x in range(len(batterij_energyNotServedFactor[0,:,0]))))
+            batterij_powerDischarge_to_grid_cum.append(sum(batterij_powerDischarge_to_grid[t,x] for x in range(len(batterij_energyNotServedFactor[0,:,0]))))
         change_to_grid_cum = [x + y for x, y in zip(batterij_powerCharge_to_grid_cum, batterij_powerDischarge_to_grid_cum)]
 
 

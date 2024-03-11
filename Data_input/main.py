@@ -9,9 +9,9 @@ import pandas as pd
 #import libraries
 from datetime import datetime
 
-timestamp= 20231207                               #select the data for which the code runs
-current_interval = 15                                  #select interval from which the code runs
-length_forecast = 18*4
+timestamp= 20231215                               #select the data for which the code runs
+current_interval = 0                                  #select interval from which the code runs
+length_forecast = 27 #18*4
 
 #change dates to usable format
 date_temp = datetime.strptime(str(timestamp), '%Y%m%d')
@@ -35,8 +35,8 @@ all_appliances = {}
 #Create lists to select the relevant data needed for the optimizer
 appl = ['batterij', 'EVlaadpaal', 'AC', 'KC', 'WP_buf', 'WP_no_buf', 'WWB', 'overig']
 main_keys = ['appl_id_main','PiekAansluiting_main', 'type_flex_main']
-bat_keys = ['charge_KW_bat','size_kWh_bat','SOC_eind_1_bat','start_time_PTE_bat','end_time_PTE_bat', 'SOC_eind_2_bat','start_time_PTE2_bat','end_time_PTE2_bat', 'ICT_APPL_bat']
-
+bat_keys = ['charge_KW_bat','size_kWh_bat','SOC_eind_1_bat','end_time_PTE_bat', 'SOC_eind_2_bat','end_time_PTE2_bat', 'ICT_APPL_bat']
+#'start_time_PTE_bat', 'start_time_PTE2_bat',
 
 #retrieve the data per appliance and create a list per appliance when flex is available
 for index, appliance in enumerate(data_retr_appl.get_all()):
@@ -49,6 +49,7 @@ for index, appliance in enumerate(data_retr_appl.get_all()):
 #Initialize and run the optimizer
 time_list = {**time_list_valid['batterij']['Zonder opwek'], **time_list_valid['batterij']['Met opwek']}
 #time_list = time_list_valid['batterij']['Zonder opwek']
+#print(all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys].to_string())
 appliance_list = pd.concat([all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys],all_appliances['batterij']['Met opwek'].loc[:, main_keys + bat_keys]])
 #appliance_list = all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys]
 

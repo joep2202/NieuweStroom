@@ -1,5 +1,4 @@
 import pandas as pd
-from test_2 import test
 
 class import_data_per_day:
     def __init__(self):
@@ -11,7 +10,6 @@ class import_data_per_day:
         # List to select necessary data from csv
         self.allocatie_trading_columns = ['From_NL','Total_Allocation_MWh_both_tenants','Imbalance_Short_EurMWh', 'Imbalance_Long_EurMWh', 'EPEX_EurMWh', 'Buy_MW', 'Sell_MW','Traded_Volume_MWh', 'Price_Eur']
         self.DA_bid_columns = ['From_NL', 'Abs_E_Volume_MWh_both_tenants']
-        self.test = test(self.onbalanskosten)
 
     def interval_to_time(self, interval):
         hours = interval // 4  # Each interval represents 15 minutes, so 4 intervals = 1 hour
