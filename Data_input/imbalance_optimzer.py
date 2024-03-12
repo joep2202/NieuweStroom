@@ -2,6 +2,7 @@ from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 import pyomo.environ as pyomo
 import pandas as pd
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 from model import model
 from activation_protocol import activation_appliances
@@ -19,7 +20,7 @@ class optimizer:
         #self.batterij = self.batterij.iloc[0:5]
         self.batterij = self.retrieve_SOC_battery.get_SOC_battery(self.batterij)
         self.keys = self.batterij['appl_id_main'].to_list()
-        self.model_imbalance = model(self.model, allocation_trading=allocation_trading, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature, current_interval=self.current_interval, DA_bid=DA_bid)
+        self.model_imbalance = model(self.model, allocation_trading=allocation_trading, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature, current_interval=self.current_interval, DA_bid=DA_bid, length_forecast=self.length_forecast)
         self.activate_appl = activation_appliances(batterij=self.batterij)
         self.model.horizon = self.horizon
         self.model.Time = pyomo.RangeSet(0, self.model.horizon - 1)
@@ -95,7 +96,7 @@ class optimizer:
         imbalance_costs = pd.Series(self.model.imbalance_costs.extract_values(), name=self.model.imbalance_costs.name)
         imbalance_costs_epex = pd.Series(self.model.imbalance_costs_epex.extract_values(), name=self.model.imbalance_costs_epex.name)
         imbalance_costs_total = pd.Series(self.model.imbalance_costs_total.extract_values(), name=self.model.imbalance_costs_total.name)
-        # print(totaal_allocatie)
+        #print(measured_line[:,0].to_string())
         # print(totaal_allocatie_x)
 
         self.onbalanskosten_check['cum'] = self.onbalanskosten_check['Imbalance_Costs'].cumsum()
@@ -132,16 +133,27 @@ class optimizer:
         #x = np.arange(self.current_interval, self.length_forecast+self.current_interval, 8)
 
         if self.current_interval == 0:
-            y=4
+            y=8
         else:
-            y = self.current_interval % 4
-
-        x = np.arange(0 + (4-y), self.length_forecast+ (4-y), 8)
-        x = np.append(x, self.length_forecast+ (4-y))
+            y = self.current_interval % 8
+            if y == 0:
+                y = 8
+        x = np.arange(0 + (8-y), self.length_forecast+(8-y), 8)
+        if x[-1] + 8 == self.length_forecast:
+            x = np.append(x, self.length_forecast)
         x_ticks_labels = ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
                           '20:00', '22:00', '00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
+                          '20:00', '22:00', '00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
+                          '20:00', '22:00', '00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
+                          '20:00', '22:00', '00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
+                          '20:00', '22:00', '00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
+                          '20:00', '22:00', '00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
+                          '20:00', '22:00', '00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
+                          '20:00', '22:00', '00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
+                          '20:00', '22:00', '00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
                           '20:00', '22:00', '00:00']
-        x_ticks_labels = x_ticks_labels[round(self.current_interval/8):(round(self.current_interval/8)+len(x))]
+        x_ticks_labels = x_ticks_labels[math.ceil(self.current_interval/8):(math.ceil(self.current_interval/8)+len(x))]
+        #print(math.ceil(self.current_interval/8),(math.ceil(self.current_interval/8)+len(x)),x_ticks_labels)
 
         # plot necessary results
         fig, ax = plt.subplots(6, 1, figsize=(15, 12))

@@ -9,9 +9,9 @@ import pandas as pd
 #import libraries
 from datetime import datetime
 
-timestamp= 20231215                               #select the data for which the code runs
+timestamp= 20231204                               #select the data for which the code runs
 current_interval = 0                                  #select interval from which the code runs
-length_forecast = 27 #18*4
+length_forecast = 96 #18*4
 
 #change dates to usable format
 date_temp = datetime.strptime(str(timestamp), '%Y%m%d')

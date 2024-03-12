@@ -35,7 +35,7 @@ class retrieve_temp:
         self.column_names = self.column_names[1:]
         self.start_temp = self.temp[self.temp['index'].str.contains(self.formatted_date+' ' + self.formatted_time)]
         self.start_temp = self.start_temp.index[0]
-        self.temp = self.temp.iloc[self.start_temp:self.start_temp + int(self.length_forecast*1.5)]
+        self.temp = self.temp.iloc[self.start_temp:self.start_temp + int(self.length_forecast*1.6)]
         self.temp.reset_index(inplace=True, drop=True)
 
 
@@ -52,7 +52,7 @@ class retrieve_temp:
 
     def clear_files(self):
         #Clear the temporary files
-        directory = "TempAPIData"
+        directory = "data/temperature_data/TempAPIData"
         # Iterate over all files and subdirectories in the directory
         for item in os.listdir(directory):
             item_path = os.path.join(directory, item)
@@ -71,7 +71,7 @@ class retrieve_temp:
         #Set 15 minute intervals to a df
         self.new_df['time'] = datetime_index
         #create lists that are used to fill the data properly
-        for n in range(1,len(self.temp),3):
+        for n in range(1,len(self.temp)+1,3):
             self.sequence_1 = np.append(self.sequence_1, n)
             self.sequence_1 = np.append(self.sequence_1, n)
             self.sequence_2A = np.append(self.sequence_1, n)

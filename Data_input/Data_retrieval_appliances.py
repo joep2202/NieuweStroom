@@ -65,7 +65,7 @@ class data_retrieval_appliances:
             else:
                 return 0
         elif interval[0] - self.current_interval > 0:
-            if interval[0] - self.current_interval > self.length_forecast:
+            if interval[0] - self.current_interval >= self.length_forecast:
                 return 0
             return interval[0]-self.current_interval
 

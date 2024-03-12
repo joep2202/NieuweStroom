@@ -69,7 +69,7 @@ class TemperatureAPICall:
 
     def download_file_from_temporary_download_url(self, download_url, filename, x, max_keys):
         try:
-            directory = "TempAPIData"  # Directory name
+            directory = "data/temperature_data/TempAPIData"  # Directory name
             filepath = os.path.join(directory, filename)
             with requests.get(download_url, stream=True) as r:
                 r.raise_for_status()

@@ -2,12 +2,15 @@ import pandas as pd
 import pyomo.environ as pyomo
 
 class model:
-    def __init__(self, model, allocation_trading, onbalanskosten, ZWC, temperature, current_interval, DA_bid):
+    def __init__(self, model, allocation_trading, onbalanskosten, ZWC, temperature, current_interval, DA_bid, length_forecast):
         self.model = model
         self.allocation_trading = allocation_trading
         self.ZWC = ZWC
         self.onbalanskosten = onbalanskosten
         self.current_interval = current_interval
+        self.length_forecast = length_forecast
+        self.adjust_hour = (self.length_forecast-self.current_interval) % 4
+        print('adjust for hours', self.adjust_hour)
         # Get the right data into the variables
         self.epex = self.allocation_trading['EPEX_EurMWh']
         self.temperature_actual = temperature
@@ -27,6 +30,7 @@ class model:
         self.onbalanskosten = self.onbalanskosten.fillna(0)
         self.regeltoestanden = [1, -1, 0, 2]
         self.total_hour_variable = 0
+        self.number_data = 4
         self.bigM = 1000
         # If you are running rolling you should save the last total imbalance and then enter them into the variables below
         self.last_total_imbalance = 0
@@ -228,11 +232,11 @@ class model:
 
         # If batteries are charged this is a discharge from the grid and reversed also go from kW to MWh
         def battery_charge_to_grid(model, t, x):
-            return model.batterij_powerCharge_to_grid[t,x] == ((model.batterij_powerCharge[t,x]/4)/1000) *model.time_valid_batterij[t,x]
+            return model.batterij_powerCharge_to_grid[t,x] == ((model.batterij_powerCharge[t,x]/4)/100) *model.time_valid_batterij[t,x]
         self.model.battery_charge_to_grid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_to_grid)
 
         def battery_discharge_to_grid(model, t, x):
-            return model.batterij_powerDischarge_to_grid[t,x] == (((model.batterij_powerDischarge[t,x]/4)*model.batterij_efficiency)/1000) *model.time_valid_batterij[t,x]
+            return model.batterij_powerDischarge_to_grid[t,x] == (((model.batterij_powerDischarge[t,x]/4)*model.batterij_efficiency)/100) *model.time_valid_batterij[t,x]
         self.model.battery_discharge_to_grid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_discharge_to_grid)
 
         # To prevent charging and discharging simultaneously
@@ -338,10 +342,18 @@ class model:
         def total_assumed_hour(model,t,y):
             if t == 0:
                 self.total_hour_variable = t
-            elif t % 4 == 0:
+            elif (t+(4-self.adjust_hour)) % 4 == 0:            #(4-self.adjust_hour))
                 self.total_hour_variable = t
-            return model.measured_line_hour[t,y] == ((model.measured_line[0+self.total_hour_variable, y] + model.measured_line[1+self.total_hour_variable,y] + model.measured_line[2+self.total_hour_variable, y] + model.measured_line[3+self.total_hour_variable, y])/4)
+            if self.adjust_hour > 0 and t <= (self.adjust_hour-1):
+                self.number_data = self.adjust_hour
+            else:
+                self.number_data = 4
+            if self.length_forecast - t < 4:
+                self.number_data = self.length_forecast - t
+            return model.measured_line_hour[t,y] == sum(model.measured_line[z+self.total_hour_variable, y] for z in range(self.number_data))/self.number_data
         self.model.total_assumed_hour = pyomo.Constraint(self.model.Time, self.model.number_measured, rule=total_assumed_hour)
+
+        #((model.measured_line[0+self.total_hour_variable, y] + model.measured_line[1+self.total_hour_variable,y] + model.measured_line[2+self.total_hour_variable, y] + model.measured_line[3+self.total_hour_variable, y])/4)
 
         def totaal_allocatie_0(model,t):
             return model.totaal_allocatie_x[t, 0] == model.totaal_allocatie[t]
