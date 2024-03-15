@@ -9,16 +9,19 @@ from activation_protocol import activation_appliances
 from retrieve_current_state import retrieve_SOC
 
 class optimizer:
-    def __init__(self, allocation_trading, batterij, onbalanskosten, ZWC, temperature, current_interval,DA_bid, date, length_forecast):
+    def __init__(self, allocation_trading, batterij, PV, onbalanskosten, ZWC, temperature, current_interval,DA_bid, date, length_forecast):
         self.length_forecast = length_forecast
         self.horizon = self.length_forecast
         self.model = pyomo.ConcreteModel()
-        self.retrieve_SOC_battery = retrieve_SOC()
+        self.retrieve_status = retrieve_SOC()
         self.current_interval = current_interval
         # initialize model
         self.batterij = batterij
-        #self.batterij = self.batterij.iloc[0:5]
-        self.batterij = self.retrieve_SOC_battery.get_SOC_battery(self.batterij)
+        self.PV = PV
+        self.batterij = self.batterij.iloc[0:5]
+        self.PV = self.PV.iloc[0:5]
+        self.batterij = self.retrieve_status.get_SOC_battery(self.batterij)
+        self.PV, self.park_forecast = self.retrieve_status.get_PV_status(self.PV)
         self.keys = self.batterij['appl_id_main'].to_list()
         self.model_imbalance = model(self.model, allocation_trading=allocation_trading, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature, current_interval=self.current_interval, DA_bid=DA_bid, length_forecast=self.length_forecast)
         self.activate_appl = activation_appliances(batterij=self.batterij)
@@ -38,14 +41,14 @@ class optimizer:
     # Objective function, what is the goal of the optimizer
     def ObjectiveFunction(self, model):
         return sum([model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] +\
-                    [model.imbalance_costs_total[self.length_forecast-1,1,1]])
+                    [model.imbalance_costs_total[self.length_forecast-1,1,1]] + [-model.PV_production[t,x] for x in model.number_PV_parks for t in model.Time])
                     #[model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] +\
                     #[model.imbalance_costs_after_flex_total[95]]) [model.batterij_powerDischarge_to_grid[t,x] for x in model.number_batteries for t in model.Time]
                    #model.batterij_powerCharge_to_grid[95,x] for x in model.number_batteries]
 
 
     def run(self, time_list_valid):
-        self.model_imbalance.run_model(batterij=self.batterij, time_list_valid=time_list_valid, keys=self.keys)
+        self.model_imbalance.run_model(batterij=self.batterij, PV=self.PV, time_list_valid=time_list_valid, keys=self.keys)
         # initiate Gurobi and load results
         self.model.total_imbalance = pyomo.Objective(rule=self.ObjectiveFunction, sense=pyomo.minimize)
         opt = SolverFactory('gurobi', model=self.model)
@@ -91,13 +94,15 @@ class optimizer:
         time_valid_batterij = pd.Series(self.model.time_valid_batterij.extract_values(), name=self.model.time_valid_batterij.name)
         measured_line = pd.Series(self.model.measured_line.extract_values(), name=self.model.measured_line.name)
         measured_line_hour = pd.Series(self.model.measured_line_hour.extract_values(), name=self.model.measured_line_hour.name)
-        totaal_allocatie_x = pd.Series(self.model.totaal_allocatie_x.extract_values(), name=self.model.totaal_allocatie_x.name)
-        difference_MWh_plot_x = pd.Series(self.model.difference_MWh_plot_x.extract_values(), name=self.model.difference_MWh_plot_x.name)
+        totaal_allocatie = pd.Series(self.model.totaal_allocatie.extract_values(), name=self.model.totaal_allocatie.name)
+        difference_MWh_plot = pd.Series(self.model.difference_MWh_plot.extract_values(), name=self.model.difference_MWh_plot.name)
         imbalance_costs = pd.Series(self.model.imbalance_costs.extract_values(), name=self.model.imbalance_costs.name)
         imbalance_costs_epex = pd.Series(self.model.imbalance_costs_epex.extract_values(), name=self.model.imbalance_costs_epex.name)
         imbalance_costs_total = pd.Series(self.model.imbalance_costs_total.extract_values(), name=self.model.imbalance_costs_total.name)
+        PV_production = pd.Series(self.model.PV_production.extract_values(),name=self.model.PV_production.name)
+        #self.model.boolean_PV_prod.pprint()
         #print(measured_line[:,0].to_string())
-        # print(totaal_allocatie_x)
+        # print(totaal_allocatie)
 
         self.onbalanskosten_check['cum'] = self.onbalanskosten_check['Imbalance_Costs'].cumsum()
 
@@ -118,10 +123,13 @@ class optimizer:
         #sum the charge/discharge schemes so they can be projected as 1
         batterij_powerCharge_to_grid_cum = []
         batterij_powerDischarge_to_grid_cum = []
+        PV_production_cum = []
         for t in self.model.Time:
             batterij_powerCharge_to_grid_cum.append(sum(batterij_powerCharge_to_grid[t,x] for x in range(len(batterij_energyNotServedFactor[0,:,0]))))
             batterij_powerDischarge_to_grid_cum.append(sum(batterij_powerDischarge_to_grid[t,x] for x in range(len(batterij_energyNotServedFactor[0,:,0]))))
+            PV_production_cum.append(sum(PV_production[t,x] for x in range(len(PV_production[0,:]))))
         change_to_grid_cum = [x + y for x, y in zip(batterij_powerCharge_to_grid_cum, batterij_powerDischarge_to_grid_cum)]
+        print(PV_production_cum)
 
 
         charge = self.model.batterij_powerCharge.extract_values()
@@ -156,9 +164,10 @@ class optimizer:
         #print(math.ceil(self.current_interval/8),(math.ceil(self.current_interval/8)+len(x)),x_ticks_labels)
 
         # plot necessary results
-        fig, ax = plt.subplots(6, 1, figsize=(15, 12))
-        fig, axes = plt.subplots(2, 1, figsize=(15, 12))
-        fig, ax2 = plt.subplots(2, 1, figsize=(15, 12))
+        fig_situation, ax = plt.subplots(6, 1, figsize=(15, 12))
+        fig_imbalance, axes = plt.subplots(2, 1, figsize=(15, 12))
+        fig_battery, ax2 = plt.subplots(2, 1, figsize=(15, 12))
+        fig_PV, ax4 = plt.subplots(2, 1, figsize=(15, 12))
 
         ax[0].plot(temp_actual, label='Temperature actual', color='g')
         ax[0].set(xlabel='time (h)', ylabel='Temp [C]')
@@ -208,10 +217,10 @@ class optimizer:
 
         # ax[5].plot(difference_MWh_opregelen, label='Volume afregelen', color='m')
         ax[5].axhline(0, color='black', linestyle='--', linewidth=1)
-        ax[5].plot(difference_MWh_plot_x[:,1,0], label='Volume verschil', color='b')
-        ax[5].plot(difference_MWh_plot_x[:,2,0], label='Volume verschil onvermijdbaar',color='c')
-        ax[5].plot(difference_MWh_plot_x[:,3,0], label='Volume verschil comp', color='b', alpha=0.2)
-        ax[5].plot(difference_MWh_plot_x[:,1,1], label='after flex verschil', color='green', alpha=0.5)
+        ax[5].plot(difference_MWh_plot[:,1,0], label='Volume verschil', color='b')
+        ax[5].plot(difference_MWh_plot[:,2,0], label='Volume verschil onvermijdbaar',color='c')
+        ax[5].plot(difference_MWh_plot[:,3,0], label='Volume verschil comp', color='b', alpha=0.2)
+        ax[5].plot(difference_MWh_plot[:,1,1], label='after flex verschil', color='green', alpha=0.5)
         # ax[5].plot(-solar_difference, label='Solar difference', color='m')
         # ax[5].plot(-wind_difference, label='Wind difference', color='g')
         ax[5].plot(-relevant_difference, label='Total difference', color='r')
@@ -226,8 +235,8 @@ class optimizer:
         axes[0].plot(measured_line_hour[:,0],label='Total forecast hour E program', color='r')
         axes[0].plot(measured_line_hour[:,1],label='Total forecast hour V program', color='b')
         # axes[0].plot(total_forecast_trading, label='Total forecast after trading', color='r')
-        axes[0].plot(totaal_allocatie_x[:,0], label='Total allocatie', color='g')
-        axes[0].plot(totaal_allocatie_x[:,1], label='Total allocatie after flex', color='c')
+        axes[0].plot(totaal_allocatie[:,0], label='Total allocatie', color='g')
+        axes[0].plot(totaal_allocatie[:,1], label='Total allocatie after flex', color='c')
         axes[0].plot(trading_volume, label='Trading volume', color='y')
         # axes[0].plot(total_after_flex, label='allocatie met imbalance', color='c')
         # axes[0].plot(total_after_flex_hour, label='allocatie met imbalance hour',color='c')
@@ -284,4 +293,29 @@ class optimizer:
         ax2[1].legend()
         ax2[1].grid()
 
+        for z in range(5):
+            ax4[0].plot(PV_production[:, z], label='PV '+str(z), color=colors[z])
+        ax4[0].set(xlabel='time (h)', ylabel='kWh')
+        ax4[0].set_xticks(x)
+        ax4[0].set_xticklabels(x_ticks_labels)
+        ax4[0].grid()
+        ax4[0].legend()
+
+        indices = [i for i in range(0, self.length_forecast)]
+        # for z in range(len(batterij_SOC[0, :])):
+        #     ax2[1].plot(batterij_powerCharge[:, z], label='Charge'+str(z), color=colors[z])
+        #     ax2[1].plot(batterij_powerDischarge[:, z], label='Discharge'+str(z), color=colors[z])
+        #ax4[1].plot(indices, batterij_powerCharge_to_grid_cum, label='Charge', color='blue')
+        #ax4[1].plot(indices, batterij_powerDischarge_to_grid_cum, label='Discharge', color='green')
+        ax4[1].plot(indices, PV_production_cum, label='Total change', color='black')
+        ax4[1].set(xlabel='time (h)', ylabel='MW')
+        ax4[1].set_xticks(x)
+        ax4[1].set_xticklabels(x_ticks_labels)
+        ax4[1].legend()
+        ax4[1].grid()
+
+        # plt.close(fig_situation)
+        # plt.close(fig_imbalance)
+        # plt.close(fig_battery)
+        # plt.close(fig_PV)
         plt.show()

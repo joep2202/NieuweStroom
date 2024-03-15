@@ -9,7 +9,7 @@ import pandas as pd
 #import libraries
 from datetime import datetime
 
-timestamp= 20231204                               #select the data for which the code runs
+timestamp= 20231201                               #select the data for which the code runs
 current_interval = 0                                  #select interval from which the code runs
 length_forecast = 96 #18*4
 
@@ -33,9 +33,11 @@ unique_types = data_retr_appl.return_unique()
 time_list_valid = {}
 all_appliances = {}
 #Create lists to select the relevant data needed for the optimizer
-appl = ['batterij', 'EVlaadpaal', 'AC', 'KC', 'WP_buf', 'WP_no_buf', 'WWB', 'overig']
+appl = ['batterij', 'EVlaadpaal', 'AC', 'KC', 'WP_buf', 'WP_no_buf', 'WWB', 'overig', 'Zonnepanelen']
 main_keys = ['appl_id_main','PiekAansluiting_main', 'type_flex_main']
 bat_keys = ['charge_KW_bat','size_kWh_bat','SOC_eind_1_bat','end_time_PTE_bat', 'SOC_eind_2_bat','end_time_PTE2_bat', 'ICT_APPL_bat']
+zon_keys = ['model_zon', 'kwp_zon', 'm2_zon', 'ICT_APPL_zon']
+
 #'start_time_PTE_bat', 'start_time_PTE2_bat',
 
 #retrieve the data per appliance and create a list per appliance when flex is available
@@ -48,12 +50,12 @@ for index, appliance in enumerate(data_retr_appl.get_all()):
 
 #Initialize and run the optimizer
 time_list = {**time_list_valid['batterij']['Zonder opwek'], **time_list_valid['batterij']['Met opwek']}
-#time_list = time_list_valid['batterij']['Zonder opwek']
 #print(all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys].to_string())
-appliance_list = pd.concat([all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys],all_appliances['batterij']['Met opwek'].loc[:, main_keys + bat_keys]])
+appliance_list_bat = pd.concat([all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys],all_appliances['batterij']['Met opwek'].loc[:, main_keys + bat_keys]])
+appliance_list_zon = all_appliances['Zonnepanelen']['Limiteren van gebruik'].loc[:, main_keys + zon_keys]
 #appliance_list = all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys]
 
-optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=appliance_list, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], current_interval=current_interval, DA_bid=DA_bid,date=date, length_forecast=length_forecast)
+optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=appliance_list_bat, PV=appliance_list_zon, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], current_interval=current_interval, DA_bid=DA_bid,date=date, length_forecast=length_forecast)
 optimizer_imbalance.run(time_list_valid=time_list)
 
 

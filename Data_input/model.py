@@ -22,7 +22,7 @@ class model:
         self.consumption_actual = self.ZWC['Allocation_consumption']
         self.trading_volume = self.allocation_trading['Traded_Volume_MWh']
         # In een forecaster wordt totaal_allocatie vervangen door de verwachte positie
-        self.totaal_allocatie = self.allocation_trading['Total_Allocation_MWh_both_tenants']
+        self.totaal_allocatie_forecast = self.allocation_trading['Total_Allocation_MWh_both_tenants']
         self.DA_bid = DA_bid['Abs_E_Volume_MWh_both_tenants']
         # Drop some of the onbalans columns
         columns_to_drop = ['datum', 'PTE', 'periode_van', 'periode_tm', 'indicatie noodvermogen op', 'indicatie noodvermogen af', 'prikkelcomponent']
@@ -38,18 +38,18 @@ class model:
         self.last_total_imbalance_onvermijdbaar = 0
 
 
-    def run_model(self, batterij, time_list_valid, keys):
+    def run_model(self, batterij, PV, time_list_valid, keys):
         self.batterij = batterij
+        self.PV = PV
         self.time_list_valid = time_list_valid
         self.keys = keys
         self.time_list_valid = {key: self.time_list_valid[key] for key in self.keys}
         print(self.time_list_valid)
-        self.variable(batterij=self.batterij)
-        self.parameters(batterij=self.batterij, time_list_valid=self.time_list_valid)
+        self.variable()
+        self.parameters(batterij=self.batterij, PV=PV, time_list_valid=self.time_list_valid)
         self.constraints()
 
-    def variable(self, batterij):
-        self.batterij = batterij
+    def variable(self):
 
         #imbalance prices
         self.model.imbalance_afregelen = pyomo.Var(self.model.Time, within=pyomo.Any)
@@ -71,13 +71,13 @@ class model:
         self.model.imbalance_costs = pyomo.Var(self.model.Time,self.model.number_measured,self.model.number_of_allocations, within=pyomo.Any)
         self.model.imbalance_costs_epex = pyomo.Var(self.model.Time, self.model.number_measured,self.model.number_of_allocations, within=pyomo.Any)
         self.model.imbalance_costs_total = pyomo.Var(self.model.Time, self.model.number_measured,self.model.number_of_allocations, within=pyomo.Any)
-        self.model.used_price_x = pyomo.Var(self.model.Time,self.model.number_measured,self.model.number_of_allocations, within=pyomo.Any)
-        self.model.difference_MWh_afregelen_x = pyomo.Var(self.model.Time,self.model.number_measured,self.model.number_of_allocations,bounds=(-100,100), within=pyomo.NonNegativeReals)
-        self.model.difference_MWh_opregelen_x = pyomo.Var(self.model.Time,self.model.number_measured,self.model.number_of_allocations,bounds=(-100,100), within=pyomo.NonNegativeReals)
-        self.model.difference_MWh_plot_x = pyomo.Var(self.model.Time,self.model.number_measured,self.model.number_of_allocations,bounds=(-100,100), within=pyomo.Reals)
-        self.model.boolean_difference_afregelen_x = pyomo.Var(self.model.Time,self.model.number_measured, self.model.number_of_allocations,within=pyomo.Binary)
-        self.model.boolean_difference_opregelen_x = pyomo.Var(self.model.Time,self.model.number_measured, self.model.number_of_allocations,within=pyomo.Binary)
-        self.model.totaal_allocatie_x = pyomo.Var(self.model.Time, self.model.number_of_allocations, within=pyomo.Any)
+        self.model.used_price = pyomo.Var(self.model.Time,self.model.number_measured,self.model.number_of_allocations, within=pyomo.Any)
+        self.model.difference_MWh_afregelen = pyomo.Var(self.model.Time,self.model.number_measured,self.model.number_of_allocations,bounds=(-100,100), within=pyomo.NonNegativeReals)
+        self.model.difference_MWh_opregelen = pyomo.Var(self.model.Time,self.model.number_measured,self.model.number_of_allocations,bounds=(-100,100), within=pyomo.NonNegativeReals)
+        self.model.difference_MWh_plot = pyomo.Var(self.model.Time,self.model.number_measured,self.model.number_of_allocations,bounds=(-100,100), within=pyomo.Reals)
+        self.model.boolean_difference_afregelen = pyomo.Var(self.model.Time,self.model.number_measured, self.model.number_of_allocations,within=pyomo.Binary)
+        self.model.boolean_difference_opregelen = pyomo.Var(self.model.Time,self.model.number_measured, self.model.number_of_allocations,within=pyomo.Binary)
+        self.model.totaal_allocatie = pyomo.Var(self.model.Time, self.model.number_of_allocations, within=pyomo.Any)
 
         # Calculate predicted difference variables
         self.model.solar_difference = pyomo.Var(self.model.Time,bounds=(-100,100), within=pyomo.Reals)
@@ -106,15 +106,22 @@ class model:
         self.model.batterij_energyNotServedFactor_below_boolean = pyomo.Var(self.model.Time, self.model.number_batteries, self.model.number_timeslots, within=pyomo.Binary)
         self.model.batterij_energyNotServedFactor_higher_boolean = pyomo.Var(self.model.Time, self.model.number_batteries, self.model.number_timeslots, within=pyomo.Binary)
 
+        # PV variables
+        self.model.number_PV_parks = pyomo.Set(initialize=range(len(self.PV)))
+        self.model.PV_production = pyomo.Var(self.model.Time, self.model.number_PV_parks, within=pyomo.Any)
+        self.model.boolean_PV_prod = pyomo.Var(self.model.Time, self.model.number_PV_parks, within=pyomo.Binary)
 
 
-
-    def parameters(self, batterij, time_list_valid):
+    def parameters(self, batterij, PV, time_list_valid):
         self.batterij = batterij
+        self.PV = PV
         self.time_lists = pd.DataFrame.from_dict(time_list_valid)
         self.time_lists_copy = self.time_lists.T
         self.time_lists_copy.reset_index(inplace=True, drop=True)
-
+        self.size_kWh_bat = self.batterij.columns.get_loc('size_kWh_bat')
+        self.charge_KW_bat = self.batterij.columns.get_loc('charge_KW_bat')
+        self.current_SOC = self.batterij.columns.get_loc('current_SOC')
+        self.PV_index_productie = self.PV.columns.get_loc('productie')
         # Get data from variables into a parameter
         self.epex_price_dict = {}
         for index, value in self.epex.items():
@@ -163,20 +170,23 @@ class model:
         self.model.trading_volume = pyomo.Param(self.model.Time, initialize=self.trading_volume_dict)
 
         self.totaal_allocatie_dict = {}
-        for index, value in self.totaal_allocatie.items():
+        for index, value in self.totaal_allocatie_forecast.items():
             self.totaal_allocatie_dict[index] = value
-        self.model.totaal_allocatie = pyomo.Param(self.model.Time, initialize=self.totaal_allocatie_dict)
+        self.model.totaal_allocatie_forecast = pyomo.Param(self.model.Time, initialize=self.totaal_allocatie_dict)
 
         self.DA_bid_dict = {}
         for index, value in self.DA_bid.items():
             self.DA_bid_dict[index] = value
         self.model.E_program = pyomo.Param(self.model.Time, initialize=self.DA_bid_dict)
 
-        def time_list_batterij_metopwek(model, i, j):
+        def time_list_batterij(model, i, j):
             return self.time_lists_copy.iloc[j, i]
 
-        def info_batterij_metopwek(model, i, j):
+        def info_batterij(model, i, j):
             return self.batterij.iloc[j, i]
+
+        def info_PV(model, i, j):
+            return self.PV.iloc[j, i]
 
         def imbalance_costs(model, i, j):
             return self.onbalanskosten.iloc[i, j]
@@ -185,15 +195,20 @@ class model:
         self.model.range_options_batterij_time_list = pyomo.Set(initialize=range(self.time_lists.shape[1]))
         self.model.range_options_batterij = pyomo.Set(initialize=range(self.batterij.shape[0]))
         self.model.range_options_info_shape_batterij = pyomo.Set(initialize=range(self.batterij.shape[1]))
-        self.model.info_batterij = pyomo.Param(self.model.range_options_info_shape_batterij, self.model.range_options_batterij, mutable=False, initialize=info_batterij_metopwek,within=pyomo.Any)
-        self.model.time_valid_batterij = pyomo.Param(self.model.Time, self.model.range_options_batterij_time_list,mutable=True, initialize=time_list_batterij_metopwek, within=pyomo.Any)
+        self.model.info_batterij = pyomo.Param(self.model.range_options_info_shape_batterij, self.model.range_options_batterij, mutable=False, initialize=info_batterij,within=pyomo.Any)
+        self.model.time_valid_batterij = pyomo.Param(self.model.Time, self.model.range_options_batterij_time_list,mutable=True, initialize=time_list_batterij, within=pyomo.Any)
+
+        # Get all the PV information into parameters
+        self.model.range_options_PV = pyomo.Set(initialize=range(self.PV.shape[0]))
+        self.model.range_options_PV_shape = pyomo.Set(initialize=range(self.PV.shape[1]))
+        self.model.info_PV = pyomo.Param(self.model.range_options_PV_shape, self.model.range_options_PV, mutable=False, initialize=info_PV,within=pyomo.Any)
 
         # Get the imbalance prices into parameters
         self.model.range_options_onbalanskosten = pyomo.Set(initialize=range(self.onbalanskosten.shape[1]))
         self.model.onbalanskosten = pyomo.Param(self.model.Time,self.model.range_options_onbalanskosten, mutable=True, initialize=imbalance_costs, within=pyomo.Any)
         self.model.regeltoestand_options = pyomo.Param(self.model.Time, self.model.range_options_onbalans, mutable=True, initialize={(t,x): self.regeltoestanden[x] for t in self.model.Time for x in self.model.range_options_onbalans}, within=pyomo.Integers)
 
-        # Battery parameters (
+        # Battery parameters
         self.model.batterij_DoD = pyomo.Param(initialize = 0.1)
         self.model.batterij_efficiency = pyomo.Param(initialize = 0.9)
 
@@ -216,7 +231,7 @@ class model:
         ## Battery constraints
         def battery_SOC(model, t, x):
             if t == 0:
-                return model.batterij_SOC[t,x] == model.info_batterij[11,x] * model.info_batterij[4,x]
+                return model.batterij_SOC[t,x] == model.info_batterij[self.current_SOC,x] * model.info_batterij[self.size_kWh_bat,x]
             else:
                 return model.batterij_SOC[t,x] == model.batterij_SOC[t-1,x] + ((model.batterij_powerCharge_final[t,x] + model.batterij_powerDischarge_final[t,x])/4)
         self.model.battery_SOC = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC)
@@ -232,11 +247,11 @@ class model:
 
         # If batteries are charged this is a discharge from the grid and reversed also go from kW to MWh
         def battery_charge_to_grid(model, t, x):
-            return model.batterij_powerCharge_to_grid[t,x] == ((model.batterij_powerCharge[t,x]/4)/100) *model.time_valid_batterij[t,x]
+            return model.batterij_powerCharge_to_grid[t,x] == ((model.batterij_powerCharge[t,x]/4)/1000) *model.time_valid_batterij[t,x]
         self.model.battery_charge_to_grid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_to_grid)
 
         def battery_discharge_to_grid(model, t, x):
-            return model.batterij_powerDischarge_to_grid[t,x] == (((model.batterij_powerDischarge[t,x]/4)*model.batterij_efficiency)/100) *model.time_valid_batterij[t,x]
+            return model.batterij_powerDischarge_to_grid[t,x] == (((model.batterij_powerDischarge[t,x]/4)*model.batterij_efficiency)/1000) *model.time_valid_batterij[t,x]
         self.model.battery_discharge_to_grid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_discharge_to_grid)
 
         # To prevent charging and discharging simultaneously
@@ -267,7 +282,7 @@ class model:
 
         ## limit charging and discharging
         def battery_charge_max(model, t, x):
-            return model.batterij_powerCharge[t,x] <= model.info_batterij[3,x]
+            return model.batterij_powerCharge[t,x] <= model.info_batterij[self.charge_KW_bat,x]
         self.model.battery_charge_max = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_max)
 
         def battery_charge_min(model, t, x):
@@ -275,7 +290,7 @@ class model:
         self.model.battery_charge_min = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_min)
 
         def battery_discharge_max(model, t, x):
-            return model.batterij_powerDischarge[t,x] >= -model.info_batterij[3,x]
+            return model.batterij_powerDischarge[t,x] >= -model.info_batterij[self.charge_KW_bat,x]
         self.model.battery_discharge_max = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_discharge_max)
 
         def battery_discharge_min(model, t, x):
@@ -285,11 +300,11 @@ class model:
 
         ## Make sure that the DoD are adheres
         def battery_SOC_max(model, t, x):
-            return model.batterij_SOC[t,x] <= (1-model.batterij_DoD)*model.info_batterij[4,x]
+            return model.batterij_SOC[t,x] <= (1-model.batterij_DoD)*model.info_batterij[self.size_kWh_bat,x]
         self.model.battery_SOC_max = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_max)
 
         def battery_SOC_min(model, t, x):
-            return model.batterij_SOC[t,x] >= model.batterij_DoD* model.info_batterij[4,x]
+            return model.batterij_SOC[t,x] >= model.batterij_DoD* model.info_batterij[self.size_kWh_bat,x]
         self.model.battery_SOC_min = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_SOC_min)
 
         ## assure it adheres the moment it needs to be at the final SOC to not limit users
@@ -332,7 +347,7 @@ class model:
         self.model.measured_line_1 = pyomo.Constraint(self.model.Time, rule=measured_line_1)
 
         def measured_line_2(model, t):
-            return model.measured_line[t, 2] == model.totaal_allocatie[t]
+            return model.measured_line[t, 2] == model.totaal_allocatie_forecast[t]
         self.model.measured_line_2 = pyomo.Constraint(self.model.Time, rule=measured_line_2)
 
         def measured_line_3(model, t):
@@ -356,28 +371,28 @@ class model:
         #((model.measured_line[0+self.total_hour_variable, y] + model.measured_line[1+self.total_hour_variable,y] + model.measured_line[2+self.total_hour_variable, y] + model.measured_line[3+self.total_hour_variable, y])/4)
 
         def totaal_allocatie_0(model,t):
-            return model.totaal_allocatie_x[t, 0] == model.totaal_allocatie[t]
+            return model.totaal_allocatie[t, 0] == model.totaal_allocatie_forecast[t]
         self.model.totaal_allocatie_0 = pyomo.Constraint(self.model.Time, rule=totaal_allocatie_0)
 
         def totaal_allocatie_1(model,t):
-            return model.totaal_allocatie_x[t, 1] == model.totaal_allocatie[t] + sum(model.batterij_powerCharge_to_grid[t,x] for x in model.number_batteries) + sum(model.batterij_powerDischarge_to_grid[t,x] for x in model.number_batteries)
+            return model.totaal_allocatie[t, 1] == model.totaal_allocatie_forecast[t] + sum(model.batterij_powerCharge_to_grid[t,x] for x in model.number_batteries) + sum(model.batterij_powerDischarge_to_grid[t,x] for x in model.number_batteries)
         self.model.totaal_allocatie_1 = pyomo.Constraint(self.model.Time, rule=totaal_allocatie_1)
 
         # #Calculate the difference between forecasted total and actual total done seperately to be able to calculate imbalance cost.
         def difference_in_MWh_afregelen(model,t, y, z):
-            return model.difference_MWh_afregelen_x[t, y, z] == (model.measured_line_hour[t,y] - model.totaal_allocatie_x[t, z]) * model.boolean_difference_afregelen_x[t,y,z]
+            return model.difference_MWh_afregelen[t, y, z] == (model.measured_line_hour[t,y] - model.totaal_allocatie[t, z]) * model.boolean_difference_afregelen[t,y,z]
         self.model.difference_in_MWh_afregelen = pyomo.Constraint(self.model.Time, self.model.number_measured, self.model.number_of_allocations ,rule=difference_in_MWh_afregelen)
 
         def difference_in_MWh_opregelen(model,t, y, z):
-            return model.difference_MWh_opregelen_x[t, y, z] == (model.totaal_allocatie_x[t,z]-model.measured_line_hour[t,y]) * model.boolean_difference_opregelen_x[t,y,z]
+            return model.difference_MWh_opregelen[t, y, z] == (model.totaal_allocatie[t,z]-model.measured_line_hour[t,y]) * model.boolean_difference_opregelen[t,y,z]
         self.model.difference_in_MWh_opregelen = pyomo.Constraint(self.model.Time, self.model.number_measured, self.model.number_of_allocations, rule=difference_in_MWh_opregelen)
 
         def difference_in_MWh_boolean(model,t, y, z):
-            return model.boolean_difference_afregelen_x[t,y,z] + model.boolean_difference_opregelen_x[t,y,z] == 1
+            return model.boolean_difference_afregelen[t,y,z] + model.boolean_difference_opregelen[t,y,z] == 1
         self.model.difference_in_MWh_boolean = pyomo.Constraint(self.model.Time, self.model.number_measured, self.model.number_of_allocations, rule=difference_in_MWh_boolean)
 
         def difference_in_MWh_plot(model,t, y, z):
-            return model.difference_MWh_plot_x[t,y,z] ==  model.measured_line_hour[t,y] - model.totaal_allocatie_x[t,z]
+            return model.difference_MWh_plot[t,y,z] ==  model.measured_line_hour[t,y] - model.totaal_allocatie[t,z]
         self.model.difference_in_MWh_plot = pyomo.Constraint(self.model.Time,self.model.number_measured, self.model.number_of_allocations, rule=difference_in_MWh_plot)
 
         def select_onbalans_price(model,t):
@@ -389,16 +404,16 @@ class model:
         self.model.select_onbalans_price_boolean = pyomo.Constraint(self.model.Time, rule=select_onbalans_price_boolean)
 
         def used_pricing(model,t,y,z):
-            return model.used_price_x[t,y,z] == (model.onbalanskosten[t,2]*model.boolean_select_imbalance[t,0])+(model.onbalanskosten[t,2]*model.boolean_select_imbalance[t,1])+(model.onbalanskosten[t,3]*model.boolean_select_imbalance[t,2])+(((model.onbalanskosten[t,2]* model.boolean_difference_opregelen_x[t,y,z])+(model.onbalanskosten[t,3]* model.boolean_difference_afregelen_x[t,y,z]))*model.boolean_select_imbalance[t,3])
+            return model.used_price[t,y,z] == (model.onbalanskosten[t,2]*model.boolean_select_imbalance[t,0])+(model.onbalanskosten[t,2]*model.boolean_select_imbalance[t,1])+(model.onbalanskosten[t,3]*model.boolean_select_imbalance[t,2])+(((model.onbalanskosten[t,2]* model.boolean_difference_opregelen[t,y,z])+(model.onbalanskosten[t,3]* model.boolean_difference_afregelen[t,y,z]))*model.boolean_select_imbalance[t,3])
         self.model.used_pricing = pyomo.Constraint(self.model.Time,self.model.number_measured, self.model.number_of_allocations, rule=used_pricing)
 
         # Calculate the imbalance cost per 15 minutes and in total
         def imbalance_cost(model,t,y,z):
-            return model.imbalance_costs[t,y,z] == (model.used_price_x[t,y,z]*-model.difference_MWh_plot_x[t,y,z])
+            return model.imbalance_costs[t,y,z] == (model.used_price[t,y,z]*-model.difference_MWh_plot[t,y,z])
         self.model.imbalance_cost = pyomo.Constraint(self.model.Time,self.model.number_measured, self.model.number_of_allocations, rule=imbalance_cost)
 
         def imbalance_cost_epex(model,t,y,z):
-            return model.imbalance_costs_epex[t,y,z] == ((model.epex_price[t]-model.used_price_x[t,y,z])*model.difference_MWh_plot_x[t,y,z])
+            return model.imbalance_costs_epex[t,y,z] == ((model.epex_price[t]-model.used_price[t,y,z])*model.difference_MWh_plot[t,y,z])
         self.model.imbalance_cost_epex = pyomo.Constraint(self.model.Time,self.model.number_measured, self.model.number_of_allocations, rule=imbalance_cost_epex)
 
         def imbalance_cost_total(model,t,y,z):
@@ -407,3 +422,10 @@ class model:
             else:
                 return model.imbalance_costs_total[t,y,z] == model.imbalance_costs_total[t - 1,y,z] + model.imbalance_costs_epex[t,y,z]
         self.model.imbalance_cost_total = pyomo.Constraint(self.model.Time,self.model.number_measured, self.model.number_of_allocations, rule=imbalance_cost_total)
+
+        def PV_prod(model, t, x):
+            if t == 0:
+                return model.PV_production[t,x] == model.info_PV[self.PV_index_productie,x]*model.boolean_PV_prod[t,x]
+            else:
+                return model.PV_production[t, x] == model.info_PV[self.PV_index_productie, x]*model.boolean_PV_prod[t,x]
+        self.model.PV_prod = pyomo.Constraint(self.model.Time, self.model.number_PV_parks, rule=PV_prod)
