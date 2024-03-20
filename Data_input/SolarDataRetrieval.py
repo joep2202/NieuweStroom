@@ -5,13 +5,12 @@ import os
 from TempAPICall import TemperatureAPICall
 from datetime import datetime, timedelta
 
-class retrieve_temp:
+class retrieve_solar:
     def __init__(self, timestamp, current_interval, length_forecast, timestamp_hour):
         self.timestamp = timestamp
         self.current_interval = current_interval
         self.length_forecast = length_forecast
         self.timestamp_hour = timestamp_hour
-        print(self.timestamp_hour)
         self.time_object = datetime.strptime(self.timestamp_hour, '%H:%M')
         minute = self.time_object.minute
         if minute in [15, 45]:
@@ -29,7 +28,7 @@ class retrieve_temp:
         #     run_api = TemperatureAPICall(timestamp=timestamp)
         #     run_api.main()
         # Read the CSV file into a DataFrame
-        self.filename = f"data/temperature_data/temperature_data_december.csv"
+        self.filename = f"data/solar_data/solar_data_december.csv"
         self.temp = pd.read_csv(self.filename, index_col=0)
         self.column_names = self.temp.columns
         self.column_names = self.column_names[1:]
@@ -52,7 +51,7 @@ class retrieve_temp:
 
     def clear_files(self):
         #Clear the temporary files
-        directory = "data/temperature_data/TempAPIData"
+        directory = "data/solar_data/solarAPIData"
         # Iterate over all files and subdirectories in the directory
         for item in os.listdir(directory):
             item_path = os.path.join(directory, item)

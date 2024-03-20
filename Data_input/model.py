@@ -2,7 +2,7 @@ import pandas as pd
 import pyomo.environ as pyomo
 
 class model:
-    def __init__(self, model, allocation_trading, onbalanskosten, ZWC, temperature, current_interval, DA_bid, length_forecast):
+    def __init__(self, model, allocation_trading, onbalanskosten, ZWC, temperature, radiation, current_interval, DA_bid, length_forecast):
         self.model = model
         self.allocation_trading = allocation_trading
         self.ZWC = ZWC
@@ -14,6 +14,7 @@ class model:
         # Get the right data into the variables
         self.epex = self.allocation_trading['EPEX_EurMWh']
         self.temperature_actual = temperature
+        self.solar_radiation = radiation
         self.solar_forecast = self.ZWC['Forecast_solar']
         self.solar_actual = self.ZWC['Allocation_solar']
         self.wind_forecast = self.ZWC['Forecast_wind']
@@ -109,7 +110,16 @@ class model:
         # PV variables
         self.model.number_PV_parks = pyomo.Set(initialize=range(len(self.PV)))
         self.model.PV_production = pyomo.Var(self.model.Time, self.model.number_PV_parks, within=pyomo.Any)
+        self.model.PV_production_no_curtailment = pyomo.Var(self.model.Time, self.model.number_PV_parks, within=pyomo.Any)
+        self.model.PV_production_to_grid = pyomo.Var(self.model.Time, within=pyomo.Any)
         self.model.boolean_PV_prod = pyomo.Var(self.model.Time, self.model.number_PV_parks, within=pyomo.Binary)
+
+        # costs variables
+        self.model.costs_battery = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.costs_PV = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.costs_battery_cum = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.costs_PV_cum = pyomo.Var(self.model.Time, within=pyomo.Any)
+        self.model.costs_total = pyomo.Var(self.model.Time, within=pyomo.Any)
 
 
     def parameters(self, batterij, PV, time_list_valid):
@@ -122,6 +132,9 @@ class model:
         self.charge_KW_bat = self.batterij.columns.get_loc('charge_KW_bat')
         self.current_SOC = self.batterij.columns.get_loc('current_SOC')
         self.PV_index_productie = self.PV.columns.get_loc('productie')
+        self.PV_m2_zon = self.PV.columns.get_loc('m2_zon')
+        self.bat_efficiency = self.batterij['efficiency_bat']
+        self.bat_costs_kwh = self.batterij['kwh_costs_bat']
         # Get data from variables into a parameter
         self.epex_price_dict = {}
         for index, value in self.epex.items():
@@ -133,6 +146,12 @@ class model:
             #print(index, value)
             self.temp_actual_dict[index] = value
         self.model.temp_actual = pyomo.Param(self.model.Time, initialize=self.temp_actual_dict)
+
+        self.solar_radiation_dict = {}
+        for index, value in self.solar_radiation.items():
+            # print(index, value)
+            self.solar_radiation_dict[index] = value
+        self.model.PV_radiation = pyomo.Param(self.model.Time, initialize=self.solar_radiation_dict)
 
         self.solar_forecast_dict = {}
         for index, value in self.solar_forecast.items():
@@ -210,7 +229,18 @@ class model:
 
         # Battery parameters
         self.model.batterij_DoD = pyomo.Param(initialize = 0.1)
-        self.model.batterij_efficiency = pyomo.Param(initialize = 0.9)
+        self.model.shelf_bat_costs = pyomo.Param(initialize = 0.069)
+        self.bat_eff = {}
+        for index, value in self.bat_efficiency.items():
+            self.bat_eff[index] = value
+        self.model.batterij_efficiency = pyomo.Param(self.model.range_options_batterij, initialize=self.bat_eff)
+
+        self.bat_kwh_costs = {}
+        for index, value in self.bat_costs_kwh.items():
+            self.bat_kwh_costs[index] = value
+        self.model.batterij_costs_kwh = pyomo.Param(self.model.range_options_batterij, initialize=self.bat_kwh_costs)
+
+        self.model.sun_curtail_costs = pyomo.Param(initialize = 0.12)
 
 
     def constraints(self):
@@ -238,7 +268,7 @@ class model:
 
         # Only charge/discharge if the time slots allow it
         def battery_charge_if_valid(model, t, x):
-            return model.batterij_powerCharge_final[t,x] == ((model.batterij_powerCharge[t,x]/4)*model.batterij_efficiency)*model.time_valid_batterij[t,x]
+            return model.batterij_powerCharge_final[t,x] == ((model.batterij_powerCharge[t,x]/4)*model.batterij_efficiency[x])*model.time_valid_batterij[t,x]
         self.model.battery_charge_if_valid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_if_valid)
 
         def battery_discharge_if_valid(model, t, x):
@@ -251,7 +281,7 @@ class model:
         self.model.battery_charge_to_grid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_charge_to_grid)
 
         def battery_discharge_to_grid(model, t, x):
-            return model.batterij_powerDischarge_to_grid[t,x] == (((model.batterij_powerDischarge[t,x]/4)*model.batterij_efficiency)/1000) *model.time_valid_batterij[t,x]
+            return model.batterij_powerDischarge_to_grid[t,x] == (((model.batterij_powerDischarge[t,x]/4)*model.batterij_efficiency[x])/1000) *model.time_valid_batterij[t,x]
         self.model.battery_discharge_to_grid = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_discharge_to_grid)
 
         # To prevent charging and discharging simultaneously
@@ -296,7 +326,6 @@ class model:
         def battery_discharge_min(model, t, x):
             return model.batterij_powerDischarge[t,x] <= 0
         self.model.battery_discharge_min = pyomo.Constraint(self.model.Time, self.model.number_batteries, rule=battery_discharge_min)
-
 
         ## Make sure that the DoD are adheres
         def battery_SOC_max(model, t, x):
@@ -375,7 +404,7 @@ class model:
         self.model.totaal_allocatie_0 = pyomo.Constraint(self.model.Time, rule=totaal_allocatie_0)
 
         def totaal_allocatie_1(model,t):
-            return model.totaal_allocatie[t, 1] == model.totaal_allocatie_forecast[t] + sum(model.batterij_powerCharge_to_grid[t,x] for x in model.number_batteries) + sum(model.batterij_powerDischarge_to_grid[t,x] for x in model.number_batteries)
+            return model.totaal_allocatie[t, 1] == model.totaal_allocatie_forecast[t] + sum(model.batterij_powerCharge_to_grid[t,x] for x in model.number_batteries) + sum(model.batterij_powerDischarge_to_grid[t,x] for x in model.number_batteries) + model.PV_production_to_grid[t]
         self.model.totaal_allocatie_1 = pyomo.Constraint(self.model.Time, rule=totaal_allocatie_1)
 
         # #Calculate the difference between forecasted total and actual total done seperately to be able to calculate imbalance cost.
@@ -425,7 +454,47 @@ class model:
 
         def PV_prod(model, t, x):
             if t == 0:
-                return model.PV_production[t,x] == model.info_PV[self.PV_index_productie,x]*model.boolean_PV_prod[t,x]
+                return model.PV_production[t,x] == (model.info_PV[self.PV_m2_zon,x]*model.boolean_PV_prod[t,x]*(model.PV_radiation[t]/1000))/100
             else:
-                return model.PV_production[t, x] == model.info_PV[self.PV_index_productie, x]*model.boolean_PV_prod[t,x]
+                return model.PV_production[t, x] == (model.info_PV[self.PV_m2_zon,x]*model.boolean_PV_prod[t,x]*(model.PV_radiation[t]/1000))/100
         self.model.PV_prod = pyomo.Constraint(self.model.Time, self.model.number_PV_parks, rule=PV_prod)
+
+        def PV_prod_without_cur(model, t, x):
+            if t == 0:
+                return model.PV_production_no_curtailment[t,x] == (model.info_PV[self.PV_m2_zon,x]*(model.PV_radiation[t]/1000))/100
+            else:
+                return model.PV_production_no_curtailment[t, x] == (model.info_PV[self.PV_m2_zon,x]*(model.PV_radiation[t]/1000))/100
+        self.model.PV_prod_without_cur = pyomo.Constraint(self.model.Time, self.model.number_PV_parks, rule=PV_prod_without_cur)
+
+        def PV_prod_to_grid(model, t, x):
+            if t == 0:
+                return model.PV_production_to_grid[t] == sum(model.PV_production[t,x]-model.PV_production_no_curtailment[t,x] for x in model.number_PV_parks)
+            else:
+                return model.PV_production_to_grid[t] == sum(model.PV_production[t,x]-model.PV_production_no_curtailment[t,x] for x in model.number_PV_parks)
+        self.model.PV_prod_to_grid = pyomo.Constraint(self.model.Time, self.model.number_PV_parks, rule=PV_prod_to_grid)
+
+        def bat_costs(model,t):
+            return model.costs_battery[t] == sum(model.batterij_powerCharge_to_grid[t,x]*1000*model.batterij_costs_kwh[x] for x in model.number_batteries) + sum(-model.batterij_powerDischarge_to_grid[t,x]*1000*model.batterij_costs_kwh[x] for x in model.number_batteries)
+        self.model.bat_costs = pyomo.Constraint(self.model.Time, rule=bat_costs)
+
+        def bat_costs_cum(model,t):
+            if t == 0:
+                return model.costs_battery_cum[t] == model.costs_battery[t]
+            else:
+                return model.costs_battery_cum[t] == model.costs_battery_cum[t-1] + model.costs_battery[t]
+        self.model.bat_costs_cum = pyomo.Constraint(self.model.Time, rule=bat_costs_cum)
+
+        def PV_costs(model,t):
+            return model.costs_PV[t] == sum((model.PV_production[t,x]-model.PV_production_no_curtailment[t,x])*1000*-(model.sun_curtail_costs+(model.epex_price[t]/1000)) for x in model.number_PV_parks)
+        self.model.PV_costs = pyomo.Constraint(self.model.Time, rule=PV_costs)
+
+        def PV_costs_cum(model,t):
+            if t == 0:
+                return model.costs_PV_cum[t] == model.costs_PV[t]
+            else:
+                return model.costs_PV_cum[t] == model.costs_PV_cum[t-1] + model.costs_PV[t]
+        self.model.PV_costs_cum = pyomo.Constraint(self.model.Time, rule=PV_costs_cum)
+
+        def total_costs(model,t):
+            return model.costs_total[t] == model.costs_battery_cum[t]+ model.costs_PV_cum[t]+ model.imbalance_costs_total[t,1,1] - model.imbalance_costs_total[t,1,0]
+        self.model.total_costs = pyomo.Constraint(self.model.Time,rule=total_costs)

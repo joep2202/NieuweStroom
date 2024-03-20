@@ -9,7 +9,7 @@ from activation_protocol import activation_appliances
 from retrieve_current_state import retrieve_SOC
 
 class optimizer:
-    def __init__(self, allocation_trading, batterij, PV, onbalanskosten, ZWC, temperature, current_interval,DA_bid, date, length_forecast):
+    def __init__(self, allocation_trading, batterij, PV, onbalanskosten, ZWC, temperature,radiation, current_interval,DA_bid, date, length_forecast):
         self.length_forecast = length_forecast
         self.horizon = self.length_forecast
         self.model = pyomo.ConcreteModel()
@@ -18,16 +18,16 @@ class optimizer:
         # initialize model
         self.batterij = batterij
         self.PV = PV
-        self.batterij = self.batterij.iloc[0:5]
-        self.PV = self.PV.iloc[0:5]
+        #self.batterij = self.batterij.iloc[0:5]
+        #self.PV = self.PV.iloc[0:5]
         self.batterij = self.retrieve_status.get_SOC_battery(self.batterij)
         self.PV, self.park_forecast = self.retrieve_status.get_PV_status(self.PV)
         self.keys = self.batterij['appl_id_main'].to_list()
-        self.model_imbalance = model(self.model, allocation_trading=allocation_trading, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature, current_interval=self.current_interval, DA_bid=DA_bid, length_forecast=self.length_forecast)
+        self.model_imbalance = model(self.model, allocation_trading=allocation_trading, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature,radiation=radiation, current_interval=self.current_interval, DA_bid=DA_bid, length_forecast=self.length_forecast)
         self.activate_appl = activation_appliances(batterij=self.batterij)
         self.model.horizon = self.horizon
         self.model.Time = pyomo.RangeSet(0, self.model.horizon - 1)
-        self.solver_time_limit = 45
+        self.solver_time_limit = 240
         self.onbalanskosten_check = pd.read_csv('data/Onbalanskosten_check.csv')
         self.onbalanskosten_check = self.onbalanskosten_check[
         self.onbalanskosten_check['From_NL'].str.contains(date)].reset_index(drop=True)
@@ -40,11 +40,13 @@ class optimizer:
 
     # Objective function, what is the goal of the optimizer
     def ObjectiveFunction(self, model):
-        return sum([model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] +\
-                    [model.imbalance_costs_total[self.length_forecast-1,1,1]] + [-model.PV_production[t,x] for x in model.number_PV_parks for t in model.Time])
+        return sum([model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] + \
+                   [model.costs_total[self.length_forecast-1]*100])
+                    #[model.imbalance_costs_total[self.length_forecast-1,1,1]]
                     #[model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] +\
                     #[model.imbalance_costs_after_flex_total[95]]) [model.batterij_powerDischarge_to_grid[t,x] for x in model.number_batteries for t in model.Time]
                    #model.batterij_powerCharge_to_grid[95,x] for x in model.number_batteries]
+                    #+ [-model.PV_production[t,x] for x in model.number_PV_parks for t in model.Time]
 
 
     def run(self, time_list_valid):
@@ -56,6 +58,7 @@ class optimizer:
         opt.options['NonConvex'] = 2
         print("send to solver")
         result = opt.solve(self.model)
+
 
         # catch if results are correctly solved or not
         if (result.solver.status == SolverStatus.ok) and (
@@ -100,9 +103,31 @@ class optimizer:
         imbalance_costs_epex = pd.Series(self.model.imbalance_costs_epex.extract_values(), name=self.model.imbalance_costs_epex.name)
         imbalance_costs_total = pd.Series(self.model.imbalance_costs_total.extract_values(), name=self.model.imbalance_costs_total.name)
         PV_production = pd.Series(self.model.PV_production.extract_values(),name=self.model.PV_production.name)
+        PV_production_to_grid = pd.Series(self.model.PV_production_to_grid.extract_values(), name=self.model.PV_production_to_grid.name)
+        PV_production_no_curtailment = pd.Series(self.model.PV_production_no_curtailment.extract_values(), name=self.model.PV_production_no_curtailment.name)
+        costs_battery = pd.Series(self.model.costs_battery.extract_values(), name=self.model.costs_battery.name)
+        costs_PV = pd.Series(self.model.costs_PV.extract_values(), name=self.model.costs_PV.name)
+        costs_total = pd.Series(self.model.costs_total.extract_values(), name=self.model.costs_total.name)
+        batterij_costs_kwh = pd.Series(self.model.batterij_costs_kwh.extract_values(), name=self.model.batterij_costs_kwh.name)
+        costs_battery_cum = pd.Series(self.model.costs_battery_cum.extract_values(), name=self.model.costs_battery_cum.name)
+        costs_PV_cum = pd.Series(self.model.costs_PV_cum.extract_values(), name=self.model.costs_PV_cum.name)
         #self.model.boolean_PV_prod.pprint()
         #print(measured_line[:,0].to_string())
-        # print(totaal_allocatie)
+        new_df = pd.DataFrame()
+        new_df['bat'] = costs_battery
+        new_df['PV'] = costs_PV
+        new_df['total'] = new_df['bat'] + new_df['PV']
+        new_df['imbalance'] = imbalance_costs_epex[:,1,0] - imbalance_costs_epex[:,1,1]
+        new_df['result'] = new_df['imbalance']-new_df['total']
+
+        # # new_df['batterij_powerDischarge_to_grid'] = batterij_powerDischarge_to_grid[56,:]*1000
+        # # new_df['costs'] = new_df['kwh costs'] * (new_df['batterij_powerCharge_to_grid']+ -new_df['batterij_powerDischarge_to_grid'])
+        # print(new_df.to_string())
+        print('result', sum(new_df['result']), 'total', sum(new_df['total']), 'imbalance', sum(new_df['imbalance']))
+        print('total costs', costs_total[self.length_forecast-1], 'cost PV', costs_PV_cum[self.length_forecast-1], 'cost bat', costs_battery_cum[self.length_forecast-1], 'imbalance oud',imbalance_costs_total[self.length_forecast-1,1,0], 'imbalance new', imbalance_costs_total[self.length_forecast-1,1,1] )
+        # print(costs_PV[42], sum(new_df['costs']))
+        # print(costs_total.to_string())
+        #self.model.costs_total.pprint()
 
         self.onbalanskosten_check['cum'] = self.onbalanskosten_check['Imbalance_Costs'].cumsum()
 
@@ -124,12 +149,13 @@ class optimizer:
         batterij_powerCharge_to_grid_cum = []
         batterij_powerDischarge_to_grid_cum = []
         PV_production_cum = []
+        PV_production_no_curtailment_cum = []
         for t in self.model.Time:
             batterij_powerCharge_to_grid_cum.append(sum(batterij_powerCharge_to_grid[t,x] for x in range(len(batterij_energyNotServedFactor[0,:,0]))))
             batterij_powerDischarge_to_grid_cum.append(sum(batterij_powerDischarge_to_grid[t,x] for x in range(len(batterij_energyNotServedFactor[0,:,0]))))
             PV_production_cum.append(sum(PV_production[t,x] for x in range(len(PV_production[0,:]))))
+            PV_production_no_curtailment_cum.append(sum(PV_production_no_curtailment[t, x] for x in range(len(PV_production_no_curtailment[0, :]))))
         change_to_grid_cum = [x + y for x, y in zip(batterij_powerCharge_to_grid_cum, batterij_powerDischarge_to_grid_cum)]
-        print(PV_production_cum)
 
 
         charge = self.model.batterij_powerCharge.extract_values()
@@ -295,7 +321,8 @@ class optimizer:
 
         for z in range(5):
             ax4[0].plot(PV_production[:, z], label='PV '+str(z), color=colors[z])
-        ax4[0].set(xlabel='time (h)', ylabel='kWh')
+            ax4[0].plot(PV_production_no_curtailment[:, z], label='PV ' + str(z), color=colors[z], alpha=0.2)
+        ax4[0].set(xlabel='time (h)', ylabel='MWh')
         ax4[0].set_xticks(x)
         ax4[0].set_xticklabels(x_ticks_labels)
         ax4[0].grid()
@@ -306,8 +333,9 @@ class optimizer:
         #     ax2[1].plot(batterij_powerCharge[:, z], label='Charge'+str(z), color=colors[z])
         #     ax2[1].plot(batterij_powerDischarge[:, z], label='Discharge'+str(z), color=colors[z])
         #ax4[1].plot(indices, batterij_powerCharge_to_grid_cum, label='Charge', color='blue')
-        #ax4[1].plot(indices, batterij_powerDischarge_to_grid_cum, label='Discharge', color='green')
+        ax4[1].plot(PV_production_to_grid, label='other variable', color='green')
         ax4[1].plot(indices, PV_production_cum, label='Total change', color='black')
+        ax4[1].plot(indices, PV_production_no_curtailment_cum, label='Total change', color='black', alpha=0.2)
         ax4[1].set(xlabel='time (h)', ylabel='MW')
         ax4[1].set_xticks(x)
         ax4[1].set_xticklabels(x_ticks_labels)
