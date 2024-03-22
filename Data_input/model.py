@@ -407,6 +407,14 @@ class model:
             return model.totaal_allocatie[t, 1] == model.totaal_allocatie_forecast[t] + sum(model.batterij_powerCharge_to_grid[t,x] for x in model.number_batteries) + sum(model.batterij_powerDischarge_to_grid[t,x] for x in model.number_batteries) + model.PV_production_to_grid[t]
         self.model.totaal_allocatie_1 = pyomo.Constraint(self.model.Time, rule=totaal_allocatie_1)
 
+        def totaal_allocatie_1_max(model,t):
+            return model.totaal_allocatie[t, 1] <= model.totaal_allocatie[t, 0] + 20
+        self.model.totaal_allocatie_1_max = pyomo.Constraint(self.model.Time, rule=totaal_allocatie_1_max)
+
+        def totaal_allocatie_1_min(model,t):
+            return model.totaal_allocatie[t, 1] >= model.totaal_allocatie[t, 0] - 20
+        self.model.totaal_allocatie_1_min = pyomo.Constraint(self.model.Time, rule=totaal_allocatie_1_min)
+
         # #Calculate the difference between forecasted total and actual total done seperately to be able to calculate imbalance cost.
         def difference_in_MWh_afregelen(model,t, y, z):
             return model.difference_MWh_afregelen[t, y, z] == (model.measured_line_hour[t,y] - model.totaal_allocatie[t, z]) * model.boolean_difference_afregelen[t,y,z]
@@ -454,16 +462,16 @@ class model:
 
         def PV_prod(model, t, x):
             if t == 0:
-                return model.PV_production[t,x] == (model.info_PV[self.PV_m2_zon,x]*model.boolean_PV_prod[t,x]*(model.PV_radiation[t]/1000))/100
+                return model.PV_production[t,x] == -((model.info_PV[self.PV_m2_zon,x]*model.boolean_PV_prod[t,x]*(model.PV_radiation[t]/1000/4))/1000)
             else:
-                return model.PV_production[t, x] == (model.info_PV[self.PV_m2_zon,x]*model.boolean_PV_prod[t,x]*(model.PV_radiation[t]/1000))/100
+                return model.PV_production[t, x] == -((model.info_PV[self.PV_m2_zon,x]*model.boolean_PV_prod[t,x]*(model.PV_radiation[t]/1000/4))/1000)
         self.model.PV_prod = pyomo.Constraint(self.model.Time, self.model.number_PV_parks, rule=PV_prod)
 
         def PV_prod_without_cur(model, t, x):
             if t == 0:
-                return model.PV_production_no_curtailment[t,x] == (model.info_PV[self.PV_m2_zon,x]*(model.PV_radiation[t]/1000))/100
+                return model.PV_production_no_curtailment[t,x] == -((model.info_PV[self.PV_m2_zon,x]*(model.PV_radiation[t]/1000/4))/1000)
             else:
-                return model.PV_production_no_curtailment[t, x] == (model.info_PV[self.PV_m2_zon,x]*(model.PV_radiation[t]/1000))/100
+                return model.PV_production_no_curtailment[t, x] == -((model.info_PV[self.PV_m2_zon,x]*(model.PV_radiation[t]/1000/4))/1000)
         self.model.PV_prod_without_cur = pyomo.Constraint(self.model.Time, self.model.number_PV_parks, rule=PV_prod_without_cur)
 
         def PV_prod_to_grid(model, t, x):
@@ -485,7 +493,7 @@ class model:
         self.model.bat_costs_cum = pyomo.Constraint(self.model.Time, rule=bat_costs_cum)
 
         def PV_costs(model,t):
-            return model.costs_PV[t] == sum((model.PV_production[t,x]-model.PV_production_no_curtailment[t,x])*1000*-(model.sun_curtail_costs+(model.epex_price[t]/1000)) for x in model.number_PV_parks)
+            return model.costs_PV[t] == sum((model.PV_production[t,x]-model.PV_production_no_curtailment[t,x]) * 1000 * model.sun_curtail_costs for x in model.number_PV_parks) #+(model.epex_price[t]/1000)
         self.model.PV_costs = pyomo.Constraint(self.model.Time, rule=PV_costs)
 
         def PV_costs_cum(model,t):

@@ -10,7 +10,7 @@ import pandas as pd
 #import libraries
 from datetime import datetime
 
-timestamp= 20231217                               #select the data for which the code runs
+timestamp= 20231231                              #select the data for which the code runs
 current_interval = 0                                  #select interval from which the code runs
 length_forecast = 96
 

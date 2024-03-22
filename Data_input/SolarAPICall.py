@@ -116,5 +116,5 @@ class SolarAPICall:
             self.download_file_from_temporary_download_url(response["temporaryDownloadUrl"], file_name, x, max_keys)
 
 
-run_api = SolarAPICall(timestamp=20231222)
+run_api = SolarAPICall(timestamp=20231231)
 run_api.main()
