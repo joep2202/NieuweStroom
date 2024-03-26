@@ -1,10 +1,23 @@
 
-time_str = ["12:15","14:30"]
-for x in time_str:
-    hours, minutes = map(int, x.split(':'))
-    total_minutes = hours * 60 + minutes
-    interval = total_minutes // 15
-    print(interval)
+
+
+import pandas as pd
+
+df = pd.read_csv('data/branches.csv')
+
+value_counts = df['Branches'].value_counts()
+
+value_counts.to_csv('data/branche_count.csv')
+print(value_counts)
+#print(df)
+
+
+# time_str = ["12:15","14:30"]
+# for x in time_str:
+#     hours, minutes = map(int, x.split(':'))
+#     total_minutes = hours * 60 + minutes
+#     interval = total_minutes // 15
+#     print(interval)
 
 
 # class test:

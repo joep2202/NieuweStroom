@@ -10,7 +10,7 @@ import pandas as pd
 #import libraries
 from datetime import datetime
 
-timestamp= 20231231                              #select the data for which the code runs
+timestamp= 20231215                              #select the data for which the code runs
 current_interval = 0                                  #select interval from which the code runs
 length_forecast = 96
 
@@ -41,7 +41,6 @@ main_keys = ['appl_id_main','PiekAansluiting_main', 'type_flex_main']
 bat_keys = ['charge_KW_bat','size_kWh_bat','SOC_eind_1_bat','end_time_PTE_bat', 'SOC_eind_2_bat','end_time_PTE2_bat', 'kwh_costs_bat', 'efficiency_bat', 'ICT_APPL_bat']
 zon_keys = ['model_zon', 'kwp_zon', 'm2_zon', 'ICT_APPL_zon']
 
-#'start_time_PTE_bat', 'start_time_PTE2_bat',
 
 #retrieve the data per appliance and create a list per appliance when flex is available
 for index, appliance in enumerate(data_retr_appl.get_all()):

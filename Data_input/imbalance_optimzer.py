@@ -42,11 +42,6 @@ class optimizer:
     def ObjectiveFunction(self, model):
         return sum([model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] + \
                    [model.costs_total[self.length_forecast-1]*100])
-                    #[model.imbalance_costs_total[self.length_forecast-1,1,1]]
-                    #[model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] +\
-                    #[model.imbalance_costs_after_flex_total[95]]) [model.batterij_powerDischarge_to_grid[t,x] for x in model.number_batteries for t in model.Time]
-                   #model.batterij_powerCharge_to_grid[95,x] for x in model.number_batteries]
-                    #+ [-model.PV_production[t,x] for x in model.number_PV_parks for t in model.Time]
 
 
     def run(self, time_list_valid):
@@ -111,8 +106,8 @@ class optimizer:
         batterij_costs_kwh = pd.Series(self.model.batterij_costs_kwh.extract_values(), name=self.model.batterij_costs_kwh.name)
         costs_battery_cum = pd.Series(self.model.costs_battery_cum.extract_values(), name=self.model.costs_battery_cum.name)
         costs_PV_cum = pd.Series(self.model.costs_PV_cum.extract_values(), name=self.model.costs_PV_cum.name)
-        #self.model.boolean_PV_prod.pprint()
-        #print(measured_line[:,0].to_string())
+
+
         new_df = pd.DataFrame()
         new_df['bat'] = costs_battery
         new_df['PV'] = costs_PV
@@ -120,26 +115,11 @@ class optimizer:
         new_df['imbalance'] = imbalance_costs_epex[:,1,0] - imbalance_costs_epex[:,1,1]
         new_df['result'] = new_df['imbalance']-new_df['total']
 
-        # # new_df['batterij_powerDischarge_to_grid'] = batterij_powerDischarge_to_grid[56,:]*1000
-        # # new_df['costs'] = new_df['kwh costs'] * (new_df['batterij_powerCharge_to_grid']+ -new_df['batterij_powerDischarge_to_grid'])
-        # print(new_df.to_string())
         print('result', sum(new_df['result']), 'total', sum(new_df['total']), 'imbalance', sum(new_df['imbalance']))
         print('total costs', costs_total[self.length_forecast-1], 'cost PV', costs_PV_cum[self.length_forecast-1], 'cost bat', costs_battery_cum[self.length_forecast-1], 'imbalance oud',imbalance_costs_total[self.length_forecast-1,1,0], 'imbalance new', imbalance_costs_total[self.length_forecast-1,1,1] )
-        # print(costs_PV[42], sum(new_df['costs']))
-        # print(costs_total.to_string())
-        #self.model.costs_total.pprint()
 
+        #Make the imbalance costs cumulative to be able to check if the code produces the right values
         self.onbalanskosten_check['cum'] = self.onbalanskosten_check['Imbalance_Costs'].cumsum()
-
-        # print(len(batterij_energyNotServedFactor[self.current_interval, :, 0]))
-        # print(batterij_energyNotServedFactor)
-        # for x in range(len(batterij_energyNotServedFactor[0,:,0])):
-        #     for z in range(2):
-        #         print(x, z, self.batterij[self.objective_list[z]].iloc[x], batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z])
-        #         # print(self.batterij[self.objective_list[z]].iloc[x])
-        #         self.check += batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z]
-        # print('check', self.check)
-
 
         print(len(batterij_energyNotServedFactor[0,:,0]))
         print('finalsum', sum([batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] for z in range(2) for x in range(len(batterij_energyNotServedFactor[0,:,0]))]))
@@ -163,9 +143,8 @@ class optimizer:
         self.activate_appl.activation_protocol(charge=charge,discharge=discharge, current_interval=self.current_interval, keys=self.keys, length_forecast=self.length_forecast)
         self.activate_appl.feedback_traders(change_to_grid_cum)
 
-        # X TICK LABELS
-        #x = np.arange(self.current_interval, self.length_forecast+self.current_interval, 8)
 
+        # Produce the right labels based on the start and the length of the forecast
         if self.current_interval == 0:
             y=8
         else:
@@ -187,7 +166,6 @@ class optimizer:
                           '20:00', '22:00', '00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00',
                           '20:00', '22:00', '00:00']
         x_ticks_labels = x_ticks_labels[math.ceil(self.current_interval/8):(math.ceil(self.current_interval/8)+len(x))]
-        #print(math.ceil(self.current_interval/8),(math.ceil(self.current_interval/8)+len(x)),x_ticks_labels)
 
         # plot necessary results
         fig_situation, ax = plt.subplots(6, 1, figsize=(15, 12))
@@ -195,6 +173,7 @@ class optimizer:
         fig_battery, ax2 = plt.subplots(2, 1, figsize=(15, 12))
         fig_PV, ax4 = plt.subplots(2, 1, figsize=(15, 12))
 
+        # Plot the temperature retrieved from the API/CSV
         ax[0].plot(temp_actual, label='Temperature actual', color='g')
         ax[0].set(xlabel='time (h)', ylabel='Temp [C]')
         ax[0].set_xticks(x)
@@ -202,6 +181,7 @@ class optimizer:
         ax[0].grid()
         ax[0].legend()
 
+        # Plot the solar forecasted and the actuals
         ax[1].plot(solar_forecast, label='Solar forecast', color='m')
         ax[1].plot(solar_actual, label='Solar actual', color='g')
         ax[1].axhline(0, color='black', linestyle='--', linewidth=1)
@@ -211,6 +191,7 @@ class optimizer:
         ax[1].grid()
         ax[1].legend()
 
+        # Plot the wind forecasted and the actuals
         ax[2].plot(wind_forecast, label='Wind forecast', color='m')
         ax[2].plot(wind_actual, label='Wind actual', color='g')
         ax[2].axhline(0, color='black', linestyle='--', linewidth=1)
@@ -220,6 +201,7 @@ class optimizer:
         ax[2].grid()
         ax[2].legend()
 
+        # Plot the consumption forecasted and the actuals
         ax[3].plot(consumption_forecast, label='Consumption forecast', color='m')
         ax[3].plot(consumption_actual, label='Consumption actual', color='g')
         ax[3].set(xlabel='time (h)', ylabel='Prod in MWh')
@@ -228,6 +210,7 @@ class optimizer:
         ax[3].grid()
         ax[3].legend()
 
+        # Plot the imbalance prices and there checks
         ax[4].plot(imbalance_afregelen, label='Onbalans afregelen', color='m')
         ax[4].plot(self.price_check['Imbalance_Long_EurMWh'], label='Onbalans afregelen check', color='m', alpha=0.2)
         ax[4].plot(imbalance_opregelen, label='Onbalans opregelen', color='g')
@@ -241,15 +224,15 @@ class optimizer:
         ax[4].grid()
         # ax[4].legend()
 
-        # ax[5].plot(difference_MWh_opregelen, label='Volume afregelen', color='m')
+        # Plot the volume difference for different scenarios (standard, onvermijdbaarand flex)
         ax[5].axhline(0, color='black', linestyle='--', linewidth=1)
         ax[5].plot(difference_MWh_plot[:,1,0], label='Volume verschil', color='b')
         ax[5].plot(difference_MWh_plot[:,2,0], label='Volume verschil onvermijdbaar',color='c')
-        ax[5].plot(difference_MWh_plot[:,3,0], label='Volume verschil comp', color='b', alpha=0.2)
         ax[5].plot(difference_MWh_plot[:,1,1], label='after flex verschil', color='green', alpha=0.5)
+        # ax[5].plot(difference_MWh_plot[:,3,0], label='Volume verschil comp', color='b', alpha=0.2)
         # ax[5].plot(-solar_difference, label='Solar difference', color='m')
         # ax[5].plot(-wind_difference, label='Wind difference', color='g')
-        ax[5].plot(-relevant_difference, label='Total difference', color='r')
+        ax[5].plot(-relevant_difference, label='Weather difference', color='r')
         #ax[5].plot(self.volume_check['Imbalance_Volume_MWh'], label='Volume verschil check', color='g', alpha=0.5)
         ax[5].set(xlabel='time (h)', ylabel='Production in MWh')
         ax[5].set_xticks(x)
@@ -257,6 +240,7 @@ class optimizer:
         ax[5].grid()
         #ax[5].legend()
 
+        # Plot the DA bids with the trades and the allocation and new after flex allocation.
         axes[0].plot(measured_line[:,0], label='E programma', color='r')
         axes[0].plot(measured_line_hour[:,0],label='Total forecast hour E program', color='r')
         axes[0].plot(measured_line_hour[:,1],label='Total forecast hour V program', color='b')
@@ -272,6 +256,7 @@ class optimizer:
         axes[0].grid()
         axes[0].legend(loc='upper left', bbox_to_anchor=(0, 1))
 
+        # Plot the imbalance costs (on EPEX) and the total costs before and after flex (also onvermijdbaar)
         axes[1].plot(imbalance_costs[:,1,0], label='Imbalance before flex', color='m')
         axes[1].plot(imbalance_costs[:,1,1], label='Imbalance after flex', color='m', alpha=0.5)
         # axes[1].plot(imbalance_before_flex_comp, label='Imbalance before flex comp', color='m', alpha=0.5)
@@ -292,7 +277,7 @@ class optimizer:
         axes[1].grid()
         axes[1].legend()
 
-
+        # Plot battery operations for first 5 batteries
         colors = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black', 'darkblue', 'darkgreen', 'darkred',
                   'darkcyan', 'darkmagenta', 'darkgoldenrod', 'lightblue', 'lightgreen', 'lightcoral', 'lightcyan',
                   'slategray']
@@ -306,10 +291,8 @@ class optimizer:
         ax2[0].grid()
         ax2[0].legend()
 
+        #Plot total battery operation
         indices = [i for i in range(0, self.length_forecast)]
-        # for z in range(len(batterij_SOC[0, :])):
-        #     ax2[1].plot(batterij_powerCharge[:, z], label='Charge'+str(z), color=colors[z])
-        #     ax2[1].plot(batterij_powerDischarge[:, z], label='Discharge'+str(z), color=colors[z])
         ax2[1].plot(indices, batterij_powerCharge_to_grid_cum, label='Charge', color='blue')
         ax2[1].plot(indices, batterij_powerDischarge_to_grid_cum, label='Discharge', color='green')
         ax2[1].plot(indices, change_to_grid_cum, label='Total change', color='black')
@@ -319,6 +302,7 @@ class optimizer:
         ax2[1].legend()
         ax2[1].grid()
 
+        # Plot PV park operations for first 5 PV parks
         for z in range(5):
             ax4[0].plot(PV_production[:, z], label='PV '+str(z), color=colors[z])
             ax4[0].plot(PV_production_no_curtailment[:, z], label='PV ' + str(z), color=colors[z], alpha=0.2)
@@ -328,11 +312,8 @@ class optimizer:
         ax4[0].grid()
         ax4[0].legend()
 
+        # Plot total PV park operation
         indices = [i for i in range(0, self.length_forecast)]
-        # for z in range(len(batterij_SOC[0, :])):
-        #     ax2[1].plot(batterij_powerCharge[:, z], label='Charge'+str(z), color=colors[z])
-        #     ax2[1].plot(batterij_powerDischarge[:, z], label='Discharge'+str(z), color=colors[z])
-        #ax4[1].plot(indices, batterij_powerCharge_to_grid_cum, label='Charge', color='blue')
         ax4[1].plot(PV_production_to_grid, label='other variable', color='green')
         ax4[1].plot(indices, PV_production_cum, label='Total change', color='black')
         ax4[1].plot(indices, PV_production_no_curtailment_cum, label='Total change', color='black', alpha=0.2)
