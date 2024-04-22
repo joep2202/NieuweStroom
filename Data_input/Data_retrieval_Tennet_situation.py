@@ -62,7 +62,7 @@ class import_data_per_day:
         if self.december == True:
             self.n_clusters = 20
         else:
-            self.n_clusters = 9
+            self.n_clusters = 11
         self.ZWC = self.ZWC.iloc[self.start_ZWC:self.start_ZWC + (self.n_clusters * length_forecast)]
         #self.ZWC = self.ZWC[self.ZWC['Timestamp_NL'].str.contains(day)]
         self.ZWC_final = pd.DataFrame()

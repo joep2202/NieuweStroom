@@ -11,9 +11,9 @@ import pandas as pd
 from datetime import datetime
 
 #20240201 20231201
-timestamp= 20240216                            #select the data for which the code runs
-current_interval = 0                                  #select interval from which the code runs
-length_forecast = 96
+timestamp= 20240229                            #select the data for which the code runs
+current_interval = 24                                  #select interval from which the code runs
+length_forecast = 72
 
 # for i in range(1,32):
 #     print(i)
@@ -34,6 +34,11 @@ allocation_trading, onbalanskosten, ZWC, DA_bid = import_data_base_situation.get
 temperature = temperature_call.change_into_15min()
 solar_radiation = solar_radiation_call.change_into_15min()
 unique_types = data_retr_appl.return_unique()
+
+solar_average = solar_radiation.columns[1:]
+solar_avg = solar_radiation[solar_average].mean(axis=1)
+temperature_average = temperature.columns[1:]
+temp_avg = temperature[temperature_average].mean(axis=1)
 
 #Create two dicts that holds the appliance information
 time_list_valid = {}
@@ -60,7 +65,7 @@ appliance_list_bat = pd.concat([all_appliances['batterij']['Zonder opwek'].loc[:
 appliance_list_zon = all_appliances['Zonnepanelen']['Limiteren van gebruik'].loc[:, main_keys + zon_keys]
 #appliance_list = all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys]
 
-optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=appliance_list_bat, PV=appliance_list_zon, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], radiation=solar_radiation['DE BILT AWS'], current_interval=current_interval, DA_bid=DA_bid,date=date, length_forecast=length_forecast, timestamp=timestamp)
+optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=appliance_list_bat, PV=appliance_list_zon, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temp_avg, radiation=solar_avg, current_interval=current_interval, DA_bid=DA_bid,date=date, length_forecast=length_forecast, timestamp=timestamp)
 optimizer_imbalance.run(time_list_valid=time_list)
 
 
