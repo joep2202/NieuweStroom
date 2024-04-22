@@ -10,10 +10,13 @@ import pandas as pd
 #import libraries
 from datetime import datetime
 
-timestamp= 20231215                              #select the data for which the code runs
+#20240201 20231201
+timestamp= 20240216                            #select the data for which the code runs
 current_interval = 0                                  #select interval from which the code runs
 length_forecast = 96
 
+# for i in range(1,32):
+#     print(i)
 #change dates to usable format
 date_temp = datetime.strptime(str(timestamp), '%Y%m%d')
 date = date_temp.strftime('%d/%m/%Y')
@@ -57,7 +60,7 @@ appliance_list_bat = pd.concat([all_appliances['batterij']['Zonder opwek'].loc[:
 appliance_list_zon = all_appliances['Zonnepanelen']['Limiteren van gebruik'].loc[:, main_keys + zon_keys]
 #appliance_list = all_appliances['batterij']['Zonder opwek'].loc[:, main_keys + bat_keys]
 
-optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=appliance_list_bat, PV=appliance_list_zon, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], radiation=solar_radiation['DE BILT AWS'], current_interval=current_interval, DA_bid=DA_bid,date=date, length_forecast=length_forecast)
+optimizer_imbalance = optimizer(allocation_trading=allocation_trading,batterij=appliance_list_bat, PV=appliance_list_zon, onbalanskosten=onbalanskosten, ZWC=ZWC, temperature=temperature['DE BILT AWS'], radiation=solar_radiation['DE BILT AWS'], current_interval=current_interval, DA_bid=DA_bid,date=date, length_forecast=length_forecast, timestamp=timestamp)
 optimizer_imbalance.run(time_list_valid=time_list)
 
 

@@ -10,7 +10,7 @@ class model:
         self.current_interval = current_interval
         self.length_forecast = length_forecast
         self.adjust_hour = (self.length_forecast-self.current_interval) % 4
-        print('adjust for hours', self.adjust_hour)
+        #print('adjust for hours', self.adjust_hour)
         # Get the right data into the variables
         self.epex = self.allocation_trading['EPEX_EurMWh']
         self.temperature_actual = temperature
@@ -45,7 +45,7 @@ class model:
         self.time_list_valid = time_list_valid
         self.keys = keys
         self.time_list_valid = {key: self.time_list_valid[key] for key in self.keys}
-        print(self.time_list_valid)
+        #print(self.time_list_valid)
         self.variable()
         self.parameters(batterij=self.batterij, PV=PV, time_list_valid=self.time_list_valid)
         self.constraints()
@@ -504,5 +504,5 @@ class model:
         self.model.PV_costs_cum = pyomo.Constraint(self.model.Time, rule=PV_costs_cum)
 
         def total_costs(model,t):
-            return model.costs_total[t] == model.costs_battery_cum[t]+ model.costs_PV_cum[t]+ model.imbalance_costs_total[t,1,1] - model.imbalance_costs_total[t,1,0]
+            return model.costs_total[t] == model.costs_battery_cum[t]+ model.costs_PV_cum[t] #+ model.imbalance_costs_total[t,1,1] - model.imbalance_costs_total[t,1,0]
         self.model.total_costs = pyomo.Constraint(self.model.Time,rule=total_costs)

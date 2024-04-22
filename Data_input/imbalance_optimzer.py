@@ -9,9 +9,10 @@ from activation_protocol import activation_appliances
 from retrieve_current_state import retrieve_SOC
 
 class optimizer:
-    def __init__(self, allocation_trading, batterij, PV, onbalanskosten, ZWC, temperature,radiation, current_interval,DA_bid, date, length_forecast):
+    def __init__(self, allocation_trading, batterij, PV, onbalanskosten, ZWC, temperature,radiation, current_interval,DA_bid, date, length_forecast, timestamp):
         self.length_forecast = length_forecast
         self.horizon = self.length_forecast
+        self.timestamp = timestamp
         self.model = pyomo.ConcreteModel()
         self.retrieve_status = retrieve_SOC()
         self.current_interval = current_interval
@@ -41,7 +42,7 @@ class optimizer:
     # Objective function, what is the goal of the optimizer
     def ObjectiveFunction(self, model):
         return sum([model.batterij_energyNotServedFactor[self.batterij[self.objective_list[z]].iloc[x], x, z] *100 for z in model.number_timeslots for x in model.number_batteries] + \
-                   [model.costs_total[self.length_forecast-1]*100])
+                   [model.costs_total[self.length_forecast-1]*10])
 
 
     def run(self, time_list_valid):
@@ -114,9 +115,9 @@ class optimizer:
         new_df['total'] = new_df['bat'] + new_df['PV']
         new_df['imbalance'] = imbalance_costs_epex[:,1,0] - imbalance_costs_epex[:,1,1]
         new_df['result'] = new_df['imbalance']-new_df['total']
-
+        #print("costs_battery",costs_battery.to_string())
         print('result', sum(new_df['result']), 'total', sum(new_df['total']), 'imbalance', sum(new_df['imbalance']))
-        print('total costs', costs_total[self.length_forecast-1], 'cost PV', costs_PV_cum[self.length_forecast-1], 'cost bat', costs_battery_cum[self.length_forecast-1], 'imbalance oud',imbalance_costs_total[self.length_forecast-1,1,0], 'imbalance new', imbalance_costs_total[self.length_forecast-1,1,1] )
+        print('total costs', costs_total[self.length_forecast-1], costs_total[self.length_forecast-1]-1461.78, 'cost PV', costs_PV_cum[self.length_forecast-1], 'cost bat', costs_battery_cum[self.length_forecast-1],costs_battery_cum[self.length_forecast-1]-1461.78 , 'imbalance oud',imbalance_costs_total[self.length_forecast-1,1,0], 'imbalance new', imbalance_costs_total[self.length_forecast-1,1,1] )
 
         #Make the imbalance costs cumulative to be able to check if the code produces the right values
         self.onbalanskosten_check['cum'] = self.onbalanskosten_check['Imbalance_Costs'].cumsum()
@@ -239,6 +240,7 @@ class optimizer:
         ax[5].set_xticklabels(x_ticks_labels)
         ax[5].grid()
         #ax[5].legend()
+        fig_situation.savefig(f'data/results/fig1_{self.timestamp}')
 
         # Plot the DA bids with the trades and the allocation and new after flex allocation.
         axes[0].plot(measured_line[:,0], label='E programma', color='r')
@@ -276,6 +278,7 @@ class optimizer:
         axes[1].set_xticklabels(x_ticks_labels)
         axes[1].grid()
         axes[1].legend()
+        fig_imbalance.savefig(f'data/results/fig2_{self.timestamp}')
 
         # Plot battery operations for first 5 batteries
         colors = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black', 'darkblue', 'darkgreen', 'darkred',
@@ -301,6 +304,7 @@ class optimizer:
         ax2[1].set_xticklabels(x_ticks_labels)
         ax2[1].legend()
         ax2[1].grid()
+        fig_battery.savefig(f'data/results/fig3_{self.timestamp}')
 
         # Plot PV park operations for first 5 PV parks
         for z in range(5):
@@ -322,6 +326,7 @@ class optimizer:
         ax4[1].set_xticklabels(x_ticks_labels)
         ax4[1].legend()
         ax4[1].grid()
+        fig_PV.savefig(f'data/results/fig4_{self.timestamp}')
 
         # plt.close(fig_situation)
         # plt.close(fig_imbalance)

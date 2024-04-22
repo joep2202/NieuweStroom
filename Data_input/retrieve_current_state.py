@@ -16,12 +16,12 @@ class retrieve_SOC:
         batterij['aansluiting ruimte'] = batterij['PiekAansluiting_main'] - (batterij['PiekAansluiting_main']*0.7)
         batterij.reset_index(inplace=True, drop=True)
         batterij = batterij[batterij['Availability'] == 'Yes']
-        print('Batterij', batterij.to_string())
+        #print('Batterij', batterij.to_string())
         return batterij
 
     def get_PV_status(self, zonnepanelen):
         zonnepanelen.reset_index(inplace=True, drop=True)
         zonnepanelen['productie'] = zonnepanelen['kwp_zon']*self.random_soc[random.randrange(0, len(self.random_soc), 1)]
-        print('Zonnepanelen', zonnepanelen.to_string())
+        #print('Zonnepanelen', zonnepanelen.to_string())
         per_park_forecast = 0
         return zonnepanelen, per_park_forecast

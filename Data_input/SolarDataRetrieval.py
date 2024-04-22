@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import os
-from TempAPICall import TemperatureAPICall
+#from TempAPICall import TemperatureAPICall
 from datetime import datetime, timedelta
 
 class retrieve_solar:
@@ -20,7 +20,7 @@ class retrieve_solar:
         # self.rounded_time -= timedelta(minutes=self.rounded_time.minute % 10)
         # self.rounded_time_string = self.rounded_time.strftime('%H:%M')
         self.date_object = datetime.strptime(str(self.timestamp), '%Y%m%d')
-        self.formatted_date = self.date_object.strftime('%Y-%m-%d')
+        self.formatted_date = self.date_object.strftime('%d/%m/%Y')
         #Get file with temperature data if it exists
         #self.filename = f"data/temperature_data/temperature_data_{self.timestamp}.csv"
         #If there is no file call API to get the right temperature data
@@ -28,11 +28,12 @@ class retrieve_solar:
         #     run_api = TemperatureAPICall(timestamp=timestamp)
         #     run_api.main()
         # Read the CSV file into a DataFrame
-        self.filename = f"data/solar_data/solar_data_december.csv"
+        #self.filename = f"data/solar_data/solar_data_december.csv"
+        self.filename = f"data/solar_data/solar_data_complete.csv"
         self.temp = pd.read_csv(self.filename, index_col=0)
         self.column_names = self.temp.columns
         self.column_names = self.column_names[1:]
-        self.start_temp = self.temp[self.temp['index'].str.contains(self.formatted_date+' ' + self.formatted_time)]
+        self.start_temp = self.temp[self.temp['Date'].str.contains(self.formatted_date+' ' + self.formatted_time)]
         self.start_temp = self.start_temp.index[0]
         self.temp = self.temp.iloc[self.start_temp:self.start_temp + int(self.length_forecast*1.6)]
         self.temp.reset_index(inplace=True, drop=True)
@@ -63,7 +64,7 @@ class retrieve_solar:
     def change_into_15min(self):
         #change the timestamp into correct time format
         datetime_str = str(self.formatted_date+' ' + self.timestamp_hour)
-        date_object_start = datetime.strptime(datetime_str, '%Y-%m-%d %H:%M')
+        date_object_start = datetime.strptime(datetime_str, '%d/%m/%Y %H:%M') #'%Y-%m-%d %H:%M'
         date_object_end = date_object_start + timedelta(minutes=15 * (self.length_forecast-1))
         # Create the datetime index with a frequency of 15 minutes
         datetime_index = pd.date_range(start=date_object_start, end=date_object_end, freq='15min')

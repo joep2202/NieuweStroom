@@ -3,10 +3,16 @@ import pandas as pd
 class import_data_per_day:
     def __init__(self):
         # get data from CSV
-        self.allocatie_trading = pd.read_csv('data/DecemberDataAlloTrading.csv')
-        self.onbalanskosten = pd.read_csv('data/DecemberDataOnbalanskosten.csv')
-        self.ZWC = pd.read_csv('data/DecemberDataZWC.csv')
-        self.DA_bid = pd.read_csv('data/e_prog_dec.csv')
+        # self.allocatie_trading = pd.read_csv('data/DecemberDataAlloTrading.csv')
+        # self.onbalanskosten = pd.read_csv('data/DecemberDataOnbalanskosten.csv')
+        # self.ZWC = pd.read_csv('data/DecemberDataZWC.csv')
+        # self.DA_bid = pd.read_csv('data/e_prog_dec.csv')
+        # self.december = True
+        self.allocatie_trading = pd.read_csv('data/FebMarchDataAlloTrading.csv')
+        self.onbalanskosten = pd.read_csv('data/FebMarchDataOnbalanskosten.csv')
+        self.ZWC = pd.read_csv('data/FebMarchDataZWC.csv')
+        self.DA_bid = pd.read_csv('data/e_prog_febMarch.csv')
+        self.december = False
         # List to select necessary data from csv
         self.allocatie_trading_columns = ['From_NL','Total_Allocation_MWh_both_tenants','Imbalance_Short_EurMWh', 'Imbalance_Long_EurMWh', 'EPEX_EurMWh', 'Buy_MW', 'Sell_MW','Traded_Volume_MWh', 'Price_Eur']
         self.DA_bid_columns = ['From_NL', 'Abs_E_Volume_MWh_both_tenants']
@@ -53,7 +59,11 @@ class import_data_per_day:
         # Get right data for ZWC we have to group by clusters to get the totals as most are divided in different clusters
         self.start_ZWC = self.ZWC[self.ZWC['Timestamp_NL'].str.contains(day + ' ' + self.time)]
         self.start_ZWC = self.start_ZWC.index[0]
-        self.ZWC = self.ZWC.iloc[self.start_ZWC:self.start_ZWC + (20 * length_forecast)]
+        if self.december == True:
+            self.n_clusters = 20
+        else:
+            self.n_clusters = 9
+        self.ZWC = self.ZWC.iloc[self.start_ZWC:self.start_ZWC + (self.n_clusters * length_forecast)]
         #self.ZWC = self.ZWC[self.ZWC['Timestamp_NL'].str.contains(day)]
         self.ZWC_final = pd.DataFrame()
         self.ZWC_final['Timestamp_NL'] = self.ZWC['Timestamp_NL'].unique()

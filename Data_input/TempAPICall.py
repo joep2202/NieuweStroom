@@ -29,7 +29,7 @@ class OpenDataAPI:
 
 
 class TemperatureAPICall:
-    def __init__(self, timestamp):
+    def __init__(self):
         # initialize logger
         logging.basicConfig()
         self.logger = logging.getLogger(__name__)
@@ -39,7 +39,6 @@ class TemperatureAPICall:
         self.new_df = pd.DataFrame()
         # get timestamps
         self.station_names_check = None
-        self.timestamp = timestamp
 
     def nc_to_csv(self, filepath, x, max_keys):
         # Change nc to df
@@ -83,7 +82,8 @@ class TemperatureAPICall:
         self.logger.info(f"Successfully downloaded dataset file to {filename}")
         self.nc_to_csv(filepath, x, max_keys)
 
-    def main(self):
+    def main(self, timestamp):
+        self.timestamp = timestamp
         api_key = "eyJvcmciOiI1ZTU1NGUxOTI3NGE5NjAwMDEyYTNlYjEiLCJpZCI6ImRmYjZjMjQyMDU0OTRiZTY4OTcwMjUxOWUzNWI1MzVjIiwiaCI6Im11cm11cjEyOCJ9"
         dataset_name = "Actuele10mindataKNMIstations"
         dataset_version = "2"
@@ -114,3 +114,9 @@ class TemperatureAPICall:
             # fetch the download url and download the file
             response = api.get_file_url(dataset_name, dataset_version, file_name)
             self.download_file_from_temporary_download_url(response["temporaryDownloadUrl"], file_name, x, max_keys)
+
+date=20240326
+run_api = TemperatureAPICall()
+for x in range(6):
+    run_api.main(timestamp=date)
+    date += 1
